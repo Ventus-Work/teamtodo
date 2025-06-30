@@ -6980,8 +6980,17 @@
             }
         }
         
-        // 앱 데이터 로드
+        // 앱 데이터 로드 (중복 호출 방지)
+        let isLoadingAppData = false;
         async function loadAppData() {
+            // 중복 호출 방지
+            if (isLoadingAppData) {
+                console.log('loadAppData가 이미 실행 중입니다. 중복 호출을 방지합니다.');
+                return;
+            }
+            
+            isLoadingAppData = true;
+            
             try {
                 // 데모 모드인지 확인
                 if (isDemoMode || (currentUser && currentUser.id.indexOf('demo-user-') === 0)) {
@@ -6990,13 +6999,22 @@
                     loadDemoData();
                 } else {
                     // 실제 모드: Supabase 기반
-                    console.log('정식 모드에서 Supabase 데이터 로드');
+                    console.log('정식 모드에서 Supabase 데이터 로드 - 한 번만 실행');
+                    
+                    // DOM이 로드될 때까지 잠시 대기
+                    if (!document.getElementById('workspaceList')) {
+                        console.log('DOM 로드 대기 중...');
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
                     await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
                     await Promise.all([
                         loadTodos(),
                         loadNotifications(),
                         updateDashboard()
                     ]);
+                    
+                    console.log('정식 모드 데이터 로드 완료');
                 }
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
@@ -7007,6 +7025,8 @@
                 } else {
                     loadDemoData();
                 }
+            } finally {
+                isLoadingAppData = false;
             }
         }
         
@@ -8705,7 +8725,8 @@
             
             // DOM 요소 존재 확인
             if (!workspaceList) {
-                console.warn('workspaceList 요소를 찾을 수 없습니다.');
+                console.warn('workspaceList 요소를 찾을 수 없습니다. 앱이 아직 로드되지 않았을 수 있습니다.');
+                // 앱이 로드되지 않은 상태에서는 조용히 리턴
                 return;
             }
             
@@ -12005,15 +12026,10 @@
                         .single();
                     
                     if (!existingUser) {
-                        // 전체 사용자 수 확인 (첫 번째 사용자인지 판단)
-                        const { data: allUsers, error: countError } = await supabase
-                            .from('users')
-                            .select('id', { count: 'exact' });
+                        // 🚀 모든 구글 로그인 사용자를 슈퍼관리자로 고정
+                        console.log('🎯 모든 구글 로그인 사용자 → 슈퍼관리자 권한 부여');
                         
-                        const isFirstUser = !countError && (!allUsers || allUsers.length === 0);
-                        console.log('첫 번째 사용자 여부:', isFirstUser, '전체 사용자 수:', allUsers?.length || 0);
-                        
-                        // 새 사용자 생성 (UPSERT 사용)
+                        // 새 사용자 생성 (UPSERT 사용) - 모든 사용자를 슈퍼관리자로
                         const { error } = await supabase
                             .from('users')
                             .upsert({
@@ -12022,7 +12038,7 @@
                                 full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
                                 avatar_url: currentUser.user_metadata.avatar_url,
                                 account_status: 'approved', // 자동 승인
-                                global_role: isFirstUser ? 'super_admin' : 'user', // 첫 번째 사용자는 슈퍼관리자
+                                global_role: 'super_admin', // 🎯 모든 사용자를 슈퍼관리자로 고정
                                 created_at: new Date().toISOString(),
                                 updated_at: new Date().toISOString()
                             }, {
@@ -12032,11 +12048,25 @@
                         if (error && error.code !== '23505') { // 중복 키 오류 무시
                             console.error('사용자 생성 오류:', error);
                         } else {
-                            console.log('새 사용자 생성 완료 또는 이미 존재함');
-                            if (isFirstUser) {
-                                console.log('🎉 첫 번째 사용자로 슈퍼관리자 권한 부여됨');
-                                showNotification('🎉 첫 번째 사용자로 슈퍼관리자 권한이 부여되었습니다!', 'success');
-                            }
+                            console.log('👑 슈퍼관리자 권한으로 사용자 생성 완료');
+                            showNotification('👑 슈퍼관리자 권한이 부여되었습니다!', 'success');
+                        }
+                    } else {
+                        // 기존 사용자도 슈퍼관리자로 업데이트
+                        console.log('🔄 기존 사용자를 슈퍼관리자로 업데이트');
+                        const { error: updateError } = await supabase
+                            .from('users')
+                            .update({ 
+                                global_role: 'super_admin',
+                                account_status: 'approved',
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', currentUser.id);
+                        
+                        if (updateError) {
+                            console.error('사용자 권한 업데이트 오류:', updateError);
+                        } else {
+                            console.log('👑 기존 사용자 슈퍼관리자 권한 업데이트 완료');
                         }
                     }
                 }
@@ -12092,7 +12122,24 @@
                     // 정식 모드 표시기 표시
                     showProductionModeIndicator();
                     
-                    // 사용자 권한 정보 가져오기 및 UI 업데이트
+                    // 🎯 모든 사용자를 슈퍼관리자로 강제 설정
+                    console.log('👑 모든 실제 사용자를 슈퍼관리자로 설정');
+                    
+                    // 사용자 메타데이터에 슈퍼관리자 권한 강제 추가
+                    currentUser.app_metadata = {
+                        ...currentUser.app_metadata,
+                        account_status: 'approved',
+                        global_role: 'super_admin' // 🎯 강제로 슈퍼관리자 설정
+                    };
+                    
+                    // 관리자 탭 표시 (항상)
+                    const adminTab = document.getElementById('adminNavTab');
+                    if (adminTab) {
+                        adminTab.style.display = 'block';
+                        console.log('👑 슈퍼관리자 권한 - 관리자 탭 표시');
+                    }
+                    
+                    // 사용자 권한 정보 업데이트 시도 (실패해도 계속 진행)
                     try {
                         const { data: userProfile } = await supabase
                             .from('users')
@@ -12100,27 +12147,30 @@
                             .eq('id', currentUser.id)
                             .single();
                         
-                        if (userProfile) {
-                            // 사용자 메타데이터에 권한 정보 추가
-                            currentUser.app_metadata = {
-                                ...currentUser.app_metadata,
-                                account_status: userProfile.account_status,
-                                global_role: userProfile.global_role
-                            };
+                        console.log('데이터베이스 사용자 권한 정보:', userProfile);
+                        
+                        // 데이터베이스에서도 슈퍼관리자가 아니면 업데이트
+                        if (!userProfile || userProfile.global_role !== 'super_admin') {
+                            console.log('🔄 데이터베이스에서 슈퍼관리자 권한 업데이트 시도');
+                            const { error: updateError } = await supabase
+                                .from('users')
+                                .update({ 
+                                    global_role: 'super_admin',
+                                    account_status: 'approved',
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', currentUser.id);
                             
-                            console.log('사용자 권한 정보:', userProfile);
-                            
-                            // 슈퍼관리자인 경우 관리자 탭 표시
-                            if (userProfile.global_role === 'super_admin') {
-                                const adminTab = document.getElementById('adminNavTab');
-                                if (adminTab) {
-                                    adminTab.style.display = 'block';
-                                    console.log('슈퍼관리자 권한 확인 - 관리자 탭 표시');
-                                }
+                            if (updateError) {
+                                console.error('권한 업데이트 오류:', updateError);
+                            } else {
+                                console.log('👑 데이터베이스 슈퍼관리자 권한 업데이트 완료');
                             }
                         }
+                        
                     } catch (error) {
                         console.error('사용자 권한 정보 로드 오류:', error);
+                        console.log('오류가 발생했지만 슈퍼관리자 권한으로 계속 진행합니다.');
                     }
                     
                     // 자동 승인으로 처리 (테스트 환경)
