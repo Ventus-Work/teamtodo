@@ -6983,30 +6983,103 @@
         // 앱 데이터 로드
         async function loadAppData() {
             try {
+                console.log('앱 데이터 로드 시작, isDemoMode:', isDemoMode, 'currentUser:', currentUser?.id);
+                
                 // 데모 모드인지 확인
                 if (isDemoMode || (currentUser && currentUser.id.indexOf('demo-user-') === 0)) {
                     // 데모 모드: localStorage 기반
                     console.log('데모 모드에서 데이터 로드');
                     loadDemoData();
                 } else {
-                    // 실제 모드: Supabase 기반
+                    // 실제 모드: Supabase 기반 (타임아웃 추가)
                     console.log('정식 모드에서 Supabase 데이터 로드');
-                    await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
-                    await Promise.all([
-                        loadTodos(),
-                        loadNotifications(),
-                        updateDashboard()
-                    ]);
+                    
+                    // 각 함수에 타임아웃 적용
+                    const loadWithTimeout = (fn, timeout = 5000) => {
+                        return Promise.race([
+                            fn(),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('타임아웃')), timeout)
+                            )
+                        ]);
+                    };
+                    
+                    try {
+                        console.log('워크스페이스 로드 시작...');
+                        await loadWithTimeout(() => loadWorkspaces(), 8000);
+                        
+                        console.log('병렬 데이터 로드 시작...');
+                        await Promise.allSettled([
+                            loadWithTimeout(() => loadTodos(), 5000),
+                            loadWithTimeout(() => loadNotifications(), 5000),
+                            loadWithTimeout(() => updateDashboard(), 3000)
+                        ]);
+                        
+                        console.log('Supabase 데이터 로드 완료');
+                    } catch (loadError) {
+                        console.error('Supabase 데이터 로드 오류:', loadError);
+                        // 워크스페이스 없는 경우 기본 워크스페이스 생성 시도
+                        if (loadError.message.includes('워크스페이스')) {
+                            console.log('기본 워크스페이스 생성 시도...');
+                            try {
+                                await createDefaultWorkspace();
+                            } catch (createError) {
+                                console.error('기본 워크스페이스 생성 실패:', createError);
+                                throw loadError;
+                            }
+                        } else {
+                            throw loadError;
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
                 // 실제 모드에서 오류 시에만 데모 모드로 폴백
                 if (!isDemoMode) {
                     console.log('실제 모드에서 오류 발생, 데모 모드로 폴백하지 않음');
-                    showNotification('데이터 로드 중 오류가 발생했습니다. 페이지를 새로고침해주세요.', 'error');
+                    showNotification('데이터 로드 중 오류가 발생했습니다. 워크스페이스를 생성해주세요.', 'error');
                 } else {
                     loadDemoData();
                 }
+            }
+        }
+        
+        // 기본 워크스페이스 생성 함수
+        async function createDefaultWorkspace() {
+            try {
+                console.log('기본 워크스페이스 생성 중...');
+                
+                const { data: workspace, error } = await supabase
+                    .from('workspaces')
+                    .insert({
+                        name: '기본 워크스페이스',
+                        description: '자동 생성된 기본 워크스페이스입니다.',
+                        created_by: currentUser.id
+                    })
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                // 워크스페이스 멤버로 추가
+                const { error: memberError } = await supabase
+                    .from('workspace_members')
+                    .insert({
+                        workspace_id: workspace.id,
+                        user_id: currentUser.id,
+                        role: 'admin',
+                        invited_by: currentUser.id
+                    });
+                
+                if (memberError) console.error('멤버 추가 오류:', memberError);
+                
+                currentWorkspace = workspace;
+                console.log('기본 워크스페이스 생성 완료:', workspace);
+                
+                return workspace;
+            } catch (error) {
+                console.error('기본 워크스페이스 생성 오류:', error);
+                throw error;
             }
         }
         
@@ -7701,6 +7774,8 @@
         // 워크스페이스 로드
         async function loadWorkspaces() {
             try {
+                console.log('워크스페이스 로드 시작...');
+                
                 const { data, error } = await supabase
                     .from('workspaces')
                     .select(`
@@ -7709,22 +7784,37 @@
                     `)
                     .eq('workspace_members.user_id', currentUser.id);
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('워크스페이스 조회 오류:', error);
+                    throw error;
+                }
+                
+                console.log('워크스페이스 조회 결과:', data);
                 
                 workspaces = data || [];
                 renderWorkspaces();
                 
+                // 워크스페이스가 없는 경우 처리
+                if (workspaces.length === 0) {
+                    console.log('워크스페이스가 없음, 기본 워크스페이스 생성 필요');
+                    throw new Error('워크스페이스가 없습니다.');
+                }
+                
                 // 첫 번째 워크스페이스를 기본으로 선택
                 if (workspaces.length > 0 && !currentWorkspace) {
                     currentWorkspace = workspaces[0];
+                    console.log('선택된 워크스페이스:', currentWorkspace);
+                    
                     // 워크스페이스에 해당하는 프로젝트 로드
                     await loadProjects();
+                    
                     // 실시간 구독 초기화
                     initializeRealtimeSubscriptions();
                 }
                 
             } catch (error) {
                 console.error('워크스페이스 로드 오류:', error);
+                throw error; // 상위로 오류 전파
             }
         }
         
