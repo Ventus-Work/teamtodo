@@ -437,54 +437,20 @@
             bottom: 0;
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(4px);
+            z-index: 1000;
+            pointer-events: auto;
         }
         .login-card {
             background: white;
             border-radius: 20px;
-            padding: 40px;
+            padding: 50px;
             text-align: center;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             max-width: 400px;
             width: 100%;
             position: relative;
             z-index: 1001;
-        }
-        
-        .login-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .login-header h2 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
-            color: #1f2937;
-        }
-        
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 32px;
-            color: #9ca3af;
-            cursor: pointer;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-        
-        .close-btn:hover {
-            background: #f3f4f6;
-            color: #6b7280;
+            pointer-events: auto;
         }
         .login-title {
             font-size: 32px;
@@ -548,34 +514,6 @@
         .login-btn.secondary:hover {
             background: #e5e7eb;
         }
-        
-        .login-modes {
-            display: flex;
-            margin-bottom: 30px;
-            border-radius: 12px;
-            background: #f8fafc;
-            padding: 4px;
-        }
-        
-        .mode-btn {
-            flex: 1;
-            padding: 12px;
-            background: transparent;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #6b7280;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .mode-btn.active {
-            background: white;
-            color: #667eea;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
         .login-divider {
             display: flex;
             align-items: center;
@@ -6589,6 +6527,17 @@
             // 오류 발생 시 재시도 메커니즘
             let initRetries = 3;
             
+            // URL 파라미터 확인하여 모드 설정
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'production') {
+                console.log('정식 버전 모드로 설정됨');
+                isDemoMode = false;
+                // URL에서 mode 파라미터 제거
+                urlParams.delete('mode');
+                const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                window.history.replaceState({}, '', newUrl);
+            }
+
             // 앱 초기화 함수 (재시도 로직 포함)
             const initWithRetry = async () => {
                 try {
@@ -6703,15 +6652,17 @@
             try {
                 console.log('앱 초기화 시작');
                 
-                // 데모 사용자가 이미 저장되어 있는지 확인
-                const savedDemoUser = localStorage.getItem('demo_user');
-                if (savedDemoUser) {
-                    console.log('저장된 데모 사용자 발견, 데모 모드로 시작');
-                    currentUser = JSON.parse(savedDemoUser);
-                    isDemoMode = true;
-                    await setupUserProfile();
-                    showApp();
-                    return;
+                // 정식 모드가 아닌 경우에만 데모 사용자 확인
+                if (!window.location.search.includes('mode=production')) {
+                    const savedDemoUser = localStorage.getItem('demo_user');
+                    if (savedDemoUser) {
+                        console.log('저장된 데모 사용자 발견, 데모 모드로 시작');
+                        currentUser = JSON.parse(savedDemoUser);
+                        isDemoMode = true;
+                        await setupUserProfile();
+                        showApp();
+                        return;
+                    }
                 }
                 
                 // Supabase 세션 확인 (타임아웃 추가)
@@ -6836,46 +6787,6 @@
         // 사용자 프로필 설정 및 승인 상태 확인
         async function setupUserProfile() {
             try {
-                console.log('setupUserProfile 실행, 데모 모드 상태:', isDemoMode);
-                
-                // 데모 모드 사용자인지 확인
-                const isDemoUser = currentUser && (
-                    currentUser.id.indexOf('demo-user-') === 0 || 
-                    currentUser.email === 'demo@teamtodo.test'
-                );
-                
-                // 데모 사용자 확인 로그
-                console.log('isDemoUser 체크:', isDemoUser);
-                
-                // 데모 사용자인 경우 데모 모드 설정
-                if (isDemoUser) {
-                    console.log('데모 사용자 확인됨, 데모 모드 활성화');
-                    isDemoMode = true;
-                    
-                    // 데모 사용자 메타데이터 설정
-                    currentUser.app_metadata = {
-                        ...currentUser.app_metadata,
-                        account_status: 'approved',
-                        global_role: 'super_admin'
-                    };
-                    
-                    // UI 업데이트
-                    updateUserUI();
-                    
-                    // 데모 데이터 로드
-                    loadDemoData();
-                    
-                    // 데모 모드 표시
-                    showDemoModeIndicator();
-                    
-                    return true;
-                }
-                
-                // 여기서부터는 실제 Supabase 인증 사용자 처리
-                
-                // 데모 모드 비활성화 (구글 로그인 등 실제 사용자)
-                isDemoMode = false;
-                
                 // 사용자 정보 확인/생성
                 const { data: existingUser } = await supabase
                     .from('users')
@@ -6922,48 +6833,32 @@
                     global_role: existingUser.global_role
                 };
                 
-                // UI 업데이트
-                updateUserUI();
-                
                 // 사용자 승인 상태 확인
                 return await checkApprovalStatus(existingUser);
                 
             } catch (error) {
                 console.error('사용자 프로필 설정 오류:', error);
-                
-                // 오류 발생 시에도 isDemoMode를 명시적으로 비활성화
-                if (!currentUser || !currentUser.id.startsWith('demo-user-')) {
-                    isDemoMode = false;
-                }
-                
                 return false;
             }
         }
         
-        // 사용자 UI 업데이트 (헤더 이름과 아바타)
-        function updateUserUI() {
-            if (!currentUser) return;
+        // 사용자 승인 상태 확인
+        async function checkApprovalStatus(user) {
+            if (!user) return false;
             
             // UI 업데이트
-            const userName = currentUser.user_metadata?.full_name || 
-                             currentUser.email?.split('@')[0] || 
-                             '사용자';
-                             
-            const userNameElement = document.getElementById('userName');
-            const userAvatarElement = document.getElementById('userAvatar');
-            
-            if (userNameElement) {
-                userNameElement.textContent = userName;
+            const userName = user.display_name || user.full_name || user.email.split('@')[0];
+            if (document.getElementById('userName')) {
+                document.getElementById('userName').textContent = userName;
+            }
+            if (document.getElementById('userAvatar')) {
+                document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
             }
             
-            if (userAvatarElement) {
-                userAvatarElement.textContent = userName.charAt(0).toUpperCase();
-            }
+            // 관리자 권한 체크 및 UI 업데이트
+            const isAdmin = user.global_role === 'admin' || user.global_role === 'super_admin';
             
             // 관리자 탭 표시 여부 설정
-            const isAdmin = currentUser.app_metadata?.global_role === 'admin' || 
-                           currentUser.app_metadata?.global_role === 'super_admin';
-                           
             const adminTab = document.getElementById('adminNavTab');
             if (adminTab) {
                 adminTab.style.display = isAdmin ? 'block' : 'none';
@@ -6973,61 +6868,6 @@
             setTimeout(() => {
                 updateNavigationTabs();
             }, 100);
-        }
-        
-        // 사용자 승인 상태 확인
-        async function checkApprovalStatus(user) {
-            // 데모 모드라면 항상 승인된 것으로 처리
-            if (isDemoMode) {
-                console.log('데모 모드 - 자동 승인 처리');
-                return true;
-            }
-            
-            if (!user) return false;
-            console.log('사용자 승인 상태 확인:', user.account_status);
-            
-            // UI 업데이트는 이미 updateUserUI() 함수로 처리되므로 생략
-            
-            // 첫 번째 사용자 자동 승인 처리 (최초 가입 사용자를 관리자로)
-            try {
-                const { count } = await supabase
-                    .from('users')
-                    .select('*', { count: 'exact', head: true });
-                
-                console.log('현재 사용자 수:', count);
-                
-                // 첫 번째 사용자인 경우 자동 승인 및 관리자 권한 부여
-                if (count === 1 && user.account_status === 'pending') {
-                    console.log('첫 번째 사용자 자동 승인 및 관리자 권한 부여');
-                    
-                    const { error } = await supabase
-                        .from('users')
-                        .update({
-                            account_status: 'approved',
-                            global_role: 'super_admin',
-                            approved_at: new Date().toISOString(),
-                            approved_by: user.id
-                        })
-                        .eq('id', user.id);
-                    
-                    if (!error) {
-                        // 현재 사용자의 메타데이터 업데이트
-                        currentUser.app_metadata = {
-                            ...currentUser.app_metadata,
-                            account_status: 'approved',
-                            global_role: 'super_admin'
-                        };
-                        
-                        // UI 업데이트
-                        updateUserUI();
-                        
-                        showNotification('관리자 계정으로 자동 승인되었습니다!', 'success');
-                        return true;
-                    }
-                }
-            } catch (error) {
-                console.error('사용자 수 확인 오류:', error);
-            }
             
             // 승인 상태에 따른 처리
             switch (user.account_status) {
@@ -7061,88 +6901,23 @@
         // 앱 데이터 로드
         async function loadAppData() {
             try {
-                console.log('loadAppData 호출됨, 데모 모드 상태:', isDemoMode);
-                
-                // 데모 모드와 실제 모드 구분
-                if (isDemoMode || (currentUser && currentUser.id.indexOf('demo-user-') === 0)) {
-                    console.log('데모 모드에서 데이터 로딩');
-                    // 데모 모드: localStorage 기반 데이터
+                // 데모 모드인지 확인
+                if (currentUser && currentUser.id.indexOf('demo-user-') === 0) {
+                    // 데모 모드: localStorage 기반
                     loadDemoData();
-                    
-                    // 데모 모드 표시기 표시
-                    showDemoModeIndicator();
                 } else {
-                    console.log('정식 버전에서 Supabase 데이터 로딩');
-                    // 실제 모드: Supabase 기반 데이터
-                    try {
-                        // 실시간 연결 초기화
-                        initializeRealtimeSubscriptions();
-                        
-                        // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
-                        await loadWorkspaces(); 
-                        
-                        // 나머지 데이터 병렬 로드
-                        await Promise.all([
-                            loadTodos(),
-                            loadNotifications(),
-                            updateDashboard()
-                        ]);
-                        
-                        // 데모 모드 표시기 숨기기
-                        hideDemoModeIndicator();
-                        
-                        console.log('정식 버전 데이터 로드 완료');
-                    } catch (dbError) {
-                        console.error('Supabase 데이터 로드 오류:', dbError);
-                        
-                        // DB 오류 시에도 데모 모드로 전환하지 않고 오류 표시
-                        showNotification('데이터 로드 중 오류가 발생했습니다. 새로고침 해주세요.', 'error');
-                        throw dbError; // 상위로 오류 전달
-                    }
+                    // 실제 모드: Supabase 기반
+                    await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
+                    await Promise.all([
+                        loadTodos(),
+                        loadNotifications(),
+                        updateDashboard()
+                    ]);
                 }
             } catch (error) {
-                console.error('데이터 로드 치명적 오류:', error);
-                showNotification('데이터 로드 중 심각한 오류가 발생했습니다.', 'error');
-                
-                // 오류 발생 시 강제 로그아웃
-                await supabase.auth.signOut();
-                showLogin();
-            }
-        }
-        
-        // 데모 모드 표시기 표시/숨기기 함수
-        function showDemoModeIndicator() {
-            const demoIndicator = document.getElementById('demoModeIndicator');
-            if (demoIndicator) {
-                demoIndicator.style.display = 'flex';
-            } else {
-                // 데모 모드 표시기가 없으면 생성
-                const indicator = document.createElement('div');
-                indicator.id = 'demoModeIndicator';
-                indicator.style.cssText = `
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
-                    background: rgba(239, 68, 68, 0.9);
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 30px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    display: flex;
-                    align-items: center;
-                    z-index: 1000;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                `;
-                indicator.innerHTML = '🔍 데모 모드';
-                document.body.appendChild(indicator);
-            }
-        }
-        
-        function hideDemoModeIndicator() {
-            const demoIndicator = document.getElementById('demoModeIndicator');
-            if (demoIndicator) {
-                demoIndicator.style.display = 'none';
+                console.error('데이터 로드 오류:', error);
+                // 오류 시 데모 모드로 폴백
+                loadDemoData();
             }
         }
         
@@ -11636,7 +11411,7 @@
             }
         }
         
-        // Google 로그인 - 정식 버전으로 로그인
+        // Google 로그인 (정식 버전으로 직접 진입)
         async function loginWithGoogle() {
             const btn = document.getElementById('googleLoginBtn');
             const originalText = btn.innerHTML;
@@ -11647,22 +11422,10 @@
                 
                 console.log('Google OAuth 로그인 시작...');
                 
-                // 모달이 있다면 닫기
-                const modal = document.getElementById('loginModal');
-                if (modal) {
-                    modal.style.display = 'none';
-                }
-                
-                // 중요: 구글 로그인 시 항상 데모 모드 비활성화
-                isDemoMode = false;
-                
-                // 기존 데모 사용자 데이터 제거
-                localStorage.removeItem('demo_user');
-                
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: window.location.origin + window.location.pathname,
+                        redirectTo: window.location.origin + window.location.pathname + '?mode=production',
                         queryParams: {
                             access_type: 'offline',
                             prompt: 'consent'
@@ -11686,15 +11449,12 @@
                 }
                 
                 console.log('✅ Google OAuth 요청 성공!', data);
-                showNotification('Google 로그인이 진행됩니다... 정식 버전으로 진입합니다.', 'success');
+                showNotification('Google 로그인이 진행됩니다...', 'success');
                 
             } catch (error) {
                 console.error('Google 로그인 전체 오류:', error);
                 btn.disabled = false;
                 btn.innerHTML = originalText;
-                
-                // 로그인 오류 시에도 데모 모드가 활성화되지 않도록 함
-                isDemoMode = false;
             }
         }
         
@@ -11999,8 +11759,99 @@
             }
         }
         
-        // 두 번째 setupUserProfile 함수는 삭제하고 첫 번째 함수만 사용합니다.
-        // 이 부분은 삭제된 함수입니다.
+        // 데모 모드용 setupUserProfile 수정
+        async function setupUserProfile() {
+            try {
+                if (!currentUser) return;
+                
+                // 데모 모드인지 먼저 확인
+                const isDemoUser = currentUser.id.indexOf('demo-user-') === 0 || currentUser.email === 'demo@teamtodo.test';
+                
+                // 실제 Supabase 사용자인 경우에만 DB 작업 수행
+                if (!isDemoUser) {
+                    // 사용자 정보 확인/생성
+                    const { data: existingUser } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('id', currentUser.id)
+                        .single();
+                    
+                    if (!existingUser) {
+                        // 새 사용자 생성
+                        const { error } = await supabase
+                            .from('users')
+                            .insert({
+                                id: currentUser.id,
+                                email: currentUser.email,
+                                full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
+                                avatar_url: currentUser.user_metadata.avatar_url
+                            });
+                        
+                        if (error) throw error;
+                    }
+                }
+                
+                // UI 업데이트 (DOM 요소 존재 확인)
+                const userName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+                const userNameElement = document.getElementById('userName');
+                const userAvatarElement = document.getElementById('userAvatar');
+                
+                if (userNameElement) {
+                    userNameElement.textContent = userName;
+                } else {
+                    console.warn('userName 요소를 찾을 수 없습니다');
+                }
+                
+                if (userAvatarElement) {
+                    userAvatarElement.textContent = userName.charAt(0).toUpperCase();
+                } else {
+                    console.warn('userAvatar 요소를 찾을 수 없습니다');
+                }
+                
+                // 데모 모드 확인 및 설정
+                if (isDemoUser) {
+                    isDemoMode = true;
+                    console.log('데모 모드 활성화됨');
+                    
+                    // 데모 모드에서는 사용자에게 관리자 권한 부여
+                    currentUser.app_metadata = {
+                        ...currentUser.app_metadata,
+                        account_status: 'approved',
+                        global_role: 'super_admin'
+                    };
+                    
+                    // 관리자 탭 표시
+                    const adminTab = document.getElementById('adminNavTab');
+                    if (adminTab) {
+                        adminTab.style.display = 'block';
+                    }
+                    
+                    // 네비게이션 탭 권한 업데이트
+                    setTimeout(() => {
+                        updateNavigationTabs();
+                    }, 100);
+                }
+                
+                // 데모 모드가 아니고 실제 사용자인 경우에만 앱 데이터 로드
+                if (!isDemoUser) {
+                    await loadAppData();
+                } else {
+                    // 데모 모드인 경우 데모 데이터 로드
+                    console.log('데모 데이터 로드 시작');
+                    loadDemoData();
+                }
+                
+                return true; // 데모 모드에서는 항상 승인된 것으로 처리
+                
+            } catch (error) {
+                console.error('사용자 프로필 설정 오류:', error);
+                // 오류가 있어도 데모 모드로 계속 진행
+                isDemoMode = true;
+                console.log('오류 발생, 데모 모드로 전환');
+                loadDemoData();
+                return true; // 오류가 있어도 계속 진행
+            }
+        }
         
         // Enter 키 처리
         document.addEventListener('keypress', function(event) {
@@ -12015,33 +11866,11 @@
         });
         
         // 로그아웃 처리
-        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-        
-        // 로그아웃 함수 - 버튼과 승인 대기 화면에서 공통으로 사용
-        async function handleLogout() {
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
             try {
                 // 실시간 구독 정리
                 cleanupRealtimeSubscriptions();
                 
-                // 데모 모드인 경우
-                if (isDemoMode) {
-                    console.log('데모 모드에서 로그아웃');
-                    // 로컬 데이터 초기화
-                    localStorage.removeItem('demo_user');
-                    // 전역 변수 초기화
-                    currentUser = null;
-                    currentWorkspace = null;
-                    todos = [];
-                    workspaces = [];
-                    isDemoMode = false;
-                    // 데모 모드 표시기 제거
-                    hideDemoModeIndicator();
-                    showLogin();
-                    return;
-                }
-                
-                // 실제 로그인 상태인 경우 Supabase 로그아웃
-                console.log('정식 버전에서 로그아웃');
                 const { error } = await supabase.auth.signOut();
                 if (error) throw error;
                 
@@ -12053,60 +11882,26 @@
                 isDemoMode = false;
                 
                 // 데모 모드 표시기 제거
-                hideDemoModeIndicator();
+                const demoIndicator = document.querySelector('.demo-mode-indicator');
+                if (demoIndicator) {
+                    demoIndicator.remove();
+                }
                 
                 showLogin();
                 
             } catch (error) {
                 console.error('로그아웃 오류:', error);
                 showNotification('로그아웃에 실패했습니다.', 'error');
-                
-                // 오류가 있어도 로그인 화면으로 돌아감
-                currentUser = null;
-                isDemoMode = false;
-                showLogin();
             }
-        }
+        });
         
         // 인증 상태 변화 감지
         supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('인증 상태 변경:', event);
-            
             if (event === 'SIGNED_IN' && session) {
                 currentUser = session.user;
-                
-                // Google OAuth 로그인으로 왔는지 확인
-                const isGoogleUser = currentUser.app_metadata?.provider === 'google' || 
-                                    currentUser.identities?.some(i => i.provider === 'google');
-                                    
-                console.log('로그인 확인 - Google 사용자:', isGoogleUser);
-                                    
-                // Google OAuth 로그인인 경우 데모 모드 비활성화
-                if (isGoogleUser) {
-                    console.log('구글 로그인 사용자 - 정식 버전 활성화');
-                    isDemoMode = false;
-                    localStorage.removeItem('demo_user');
-                }
-                
-                // 데모 사용자인지 확인
-                const isDemoUser = currentUser.id.indexOf('demo-user-') === 0 || 
-                                 currentUser.email === 'demo@teamtodo.test';
-                                 
-                // 데모 사용자면 데모 모드 활성화
-                if (isDemoUser) {
-                    console.log('데모 사용자 확인됨 - 데모 모드 활성화');
-                    isDemoMode = true;
-                }
-                
-                // 사용자 프로필 설정
-                const isApproved = await setupUserProfile();
-                
-                // 승인된 경우에만 앱 표시
-                if (isApproved || isDemoMode) {
-                    showApp();
-                }
+                await setupUserProfile();
+                showApp();
             } else if (event === 'SIGNED_OUT') {
-                isDemoMode = false; // 로그아웃 시 데모 모드 초기화
                 showLogin();
             }
         });
@@ -12409,45 +12204,12 @@
         
         // 로그인 모달 표시
         function showLoginModal() {
-            try {
-                const modal = document.getElementById('loginModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    console.log('로그인 모달이 열렸습니다.');
-                    
-                    // 첫 번째 입력 필드에 포커스
-                    setTimeout(() => {
-                        const emailInput = document.getElementById('loginEmail');
-                        if (emailInput) emailInput.focus();
-                    }, 100);
-                } else {
-                    console.error('loginModal 요소를 찾을 수 없습니다.');
-                }
-            } catch (error) {
-                console.error('로그인 모달 열기 오류:', error);
-            }
+            document.getElementById('loginModal').style.display = 'flex';
         }
         
         // 로그인 모달 숨기기
         function hideLoginModal() {
-            try {
-                const modal = document.getElementById('loginModal');
-                if (modal) {
-                    modal.style.display = 'none';
-                    console.log('로그인 모달이 닫혔습니다.');
-                    
-                    // 폼 초기화
-                    const emailForm = document.getElementById('emailLoginForm');
-                    const signupForm = document.getElementById('signupForm');
-                    if (emailForm) emailForm.reset();
-                    if (signupForm) signupForm.reset();
-                    
-                    // 기본 로그인 모드로 복원
-                    switchLoginMode('email');
-                }
-            } catch (error) {
-                console.error('로그인 모달 닫기 오류:', error);
-            }
+            document.getElementById('loginModal').style.display = 'none';
         }
         
         // ESC 키로 모달 닫기
