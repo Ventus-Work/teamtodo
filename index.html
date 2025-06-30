@@ -6411,25 +6411,29 @@
         // 초기 Supabase 클라이언트 생성
         let supabase = createSupabaseClient();
         
-        // Auth 상태 변화 감지
+        // Auth 상태 변화 감지 (OAuth 콜백이 아닌 경우에만)
         if (supabase) {
             supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('Auth 상태 변화:', event, session);
+                // OAuth 콜백 중인 경우 이 이벤트 리스너는 무시
+                const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token') || 
+                                      hashParams.has('access_token') || urlParams.has('error');
+                
+                if (isOAuthCallback) {
+                    console.log('OAuth 콜백 중이므로 일반 Auth State Change 무시');
+                    return;
+                }
+                
+                console.log('일반 Auth 상태 변화:', event, session);
                 
                 if (event === 'SIGNED_IN' && session) {
-                    console.log('로그인 성공, 앱 초기화 중...');
+                    console.log('일반 로그인 성공, 앱 초기화 중...');
                     currentUser = session.user;
                     
                     // 강제로 정식 모드 설정
                     isDemoMode = false;
                     console.log('Auth State Change - 강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
-                    
-                    // URL 정리
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.has('code') || urlParams.has('access_token')) {
-                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-                        window.history.replaceState({}, '', cleanUrl);
-                    }
                     
                     // 사용자 프로필 설정 및 앱 표시
                     try {
@@ -6575,14 +6579,19 @@
                                   hashParams.has('access_token') || urlParams.has('error');
             
             if (isOAuthCallback) {
-                console.log('OAuth 콜백 감지됨, 세션 처리 중...');
+                console.log('OAuth 콜백 감지됨, 전용 처리 시작...');
                 isDemoMode = false; // OAuth 로그인은 항상 정식 모드
                 
                 // 콜백 오류 확인
                 if (urlParams.has('error')) {
                     console.error('OAuth 오류:', urlParams.get('error'), urlParams.get('error_description'));
                     showNotification('로그인 중 오류가 발생했습니다: ' + urlParams.get('error_description'), 'error');
+                    return; // 오류 시 더 이상 진행하지 않음
                 }
+                
+                // OAuth 콜백 전용 처리
+                handleOAuthCallback();
+                return; // 일반 초기화 로직 건너뛰기
             } else if (urlParams.get('mode') === 'production') {
                 console.log('정식 버전 모드로 설정됨');
                 isDemoMode = false;
@@ -7553,6 +7562,72 @@
                     indicator.remove();
                 }, 500);
             }, 3000);
+        }
+        
+        // OAuth 콜백 전용 처리 함수
+        async function handleOAuthCallback() {
+            console.log('OAuth 콜백 전용 처리 시작');
+            
+            // 로딩 표시
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('loginContainer').style.display = 'none';
+            
+            // Auth State Change 이벤트 등록 (한 번만 실행)
+            let authHandled = false;
+            const unsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log('OAuth 콜백 중 Auth 상태 변화:', event, session);
+                
+                if (authHandled) return; // 중복 처리 방지
+                
+                if (event === 'SIGNED_IN' && session) {
+                    authHandled = true;
+                    console.log('OAuth 로그인 성공!');
+                    
+                    currentUser = session.user;
+                    isDemoMode = false;
+                    
+                    // URL 정리
+                    const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                    window.history.replaceState({}, '', cleanUrl);
+                    
+                    try {
+                        // 사용자 프로필 설정
+                        await setupUserProfile();
+                        
+                        // 앱 표시
+                        showApp();
+                        
+                        // 권한 확인 및 업데이트
+                        await checkUserPermissions(true);
+                        await updateNavigationTabs();
+                        
+                        console.log('OAuth 로그인 완료 - 앱 진입');
+                        unsubscribe(); // 이벤트 리스너 정리
+                        
+                    } catch (error) {
+                        console.error('OAuth 로그인 후 설정 오류:', error);
+                        showNotification('로그인 후 설정 중 오류가 발생했습니다.', 'error');
+                        showLogin();
+                        unsubscribe();
+                    }
+                } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+                    if (!authHandled) {
+                        console.log('OAuth 로그인 실패 - 로그인 화면으로');
+                        showLogin();
+                        unsubscribe();
+                    }
+                }
+            });
+            
+            // 타임아웃 설정 (OAuth 콜백은 더 오래 기다림)
+            setTimeout(() => {
+                if (!authHandled) {
+                    console.log('OAuth 콜백 타임아웃 - 로그인 화면으로');
+                    showNotification('로그인 처리 시간이 초과되었습니다. 다시 시도해주세요.', 'error');
+                    showLogin();
+                    unsubscribe();
+                }
+            }, 10000); // 10초 대기
         }
         
         // 브라우저 알림 권한 요청
@@ -11404,6 +11479,8 @@
             const description = prompt('워크스페이스 설명을 입력하세요 (선택사항):');
             
             try {
+                console.log('워크스페이스 생성 시작:', { name: name.trim(), description: description?.trim(), created_by: currentUser.id });
+                
                 const { data, error } = await supabase
                     .from('workspaces')
                     .insert({
@@ -11414,7 +11491,12 @@
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('워크스페이스 생성 Supabase 오류:', error);
+                    throw error;
+                }
+                
+                console.log('워크스페이스 생성 성공:', data);
                 
                 // 워크스페이스 멤버로 자신 추가
                 const { error: memberError } = await supabase
@@ -11426,7 +11508,10 @@
                         invited_by: currentUser.id
                     });
                 
-                if (memberError) throw memberError;
+                if (memberError) {
+                    console.error('워크스페이스 멤버 추가 오류:', memberError);
+                    // 멤버 추가 실패해도 계속 진행
+                }
                 
                 await loadWorkspaces();
                 
@@ -11443,7 +11528,7 @@
                 
             } catch (error) {
                 console.error('워크스페이스 생성 오류:', error);
-                showNotification('워크스페이스 생성에 실패했습니다.', 'error');
+                showNotification('워크스페이스 생성에 실패했습니다: ' + error.message, 'error');
             }
         }
         
