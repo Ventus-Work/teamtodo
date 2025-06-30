@@ -6413,7 +6413,7 @@
         
         // Auth 상태 변화 감지 (OAuth 콜백이 아닌 경우에만)
         if (supabase) {
-            supabase.auth.onAuthStateChange(async (event, session) => {
+            const unsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
                 // OAuth 콜백 중인 경우 이 이벤트 리스너는 무시
                 const urlParams = new URLSearchParams(window.location.search);
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -6440,8 +6440,16 @@
                         const isApproved = await setupUserProfile();
                         if (isApproved) {
                             showApp();
-                            await checkUserPermissions(true);
-                            await updateNavigationTabs();
+                            
+                            // 비동기 함수들을 즉시 실행 함수로 감싸기
+                            (async () => {
+                                try {
+                                    await checkUserPermissions(true);
+                                    await updateNavigationTabs();
+                                } catch (asyncError) {
+                                    console.error('비동기 권한 확인 오류:', asyncError);
+                                }
+                            })();
                         }
                     } catch (error) {
                         console.error('로그인 후 설정 오류:', error);
@@ -6452,6 +6460,9 @@
                     showLogin();
                 }
             });
+            
+            // 정리 함수를 전역에 저장
+            window.authUnsubscribe = unsubscribe;
         }
         
         // Supabase 연결 상태 확인 및 재연결 함수
@@ -6556,6 +6567,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             debugLog('DOMContentLoaded 이벤트 발생');
             initializeSafetyVariables();
+            
+            // 전역 함수들 다시 등록 (확실히 하기 위해)
+            window.showLoginModal = showLoginModal;
+            window.hideLoginModal = hideLoginModal;
+            window.loginAsTestUser = loginAsTestUser;
             
             // 편집 모달 날짜 선택기 초기화
             flatpickr("#editTodoDueDate", {
@@ -7861,11 +7877,16 @@
                             // 앱 표시
                             showApp();
                             
-                            // 권한 확인 및 업데이트
-                            await checkUserPermissions(true);
-                            await updateNavigationTabs();
-                            
-                            console.log('OAuth 로그인 완료 - 앱 진입');
+                            // 권한 확인 및 업데이트 - 즉시 실행 함수로 감싸기
+                            (async () => {
+                                try {
+                                    await checkUserPermissions(true);
+                                    await updateNavigationTabs();
+                                    console.log('OAuth 로그인 완료 - 앱 진입');
+                                } catch (permError) {
+                                    console.error('OAuth 권한 확인 오류:', permError);
+                                }
+                            })();
                             
                             // 이벤트 리스너 정리
                             if (authListener && typeof authListener.unsubscribe === 'function') {
@@ -12397,6 +12418,9 @@
             }
         }
         
+        // 전역 함수로 등록
+        window.loginAsTestUser = loginAsTestUser;
+        
         // setupUserProfile 개선 버전
         async function setupUserProfile() {
             try {
@@ -12596,15 +12620,26 @@
         });
         
         // 인증 상태 변화 감지
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        const globalAuthUnsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session) {
                 currentUser = session.user;
-                await setupUserProfile();
-                showApp();
+                
+                // 비동기 함수들을 즉시 실행 함수로 감싸기
+                (async () => {
+                    try {
+                        await setupUserProfile();
+                        showApp();
+                    } catch (authError) {
+                        console.error('로그인 처리 오류:', authError);
+                    }
+                })();
             } else if (event === 'SIGNED_OUT') {
                 showLogin();
             }
         });
+        
+        // 전역 정리 함수 저장
+        window.globalAuthUnsubscribe = globalAuthUnsubscribe;
         
         // ==================== 실시간 기능 ====================
         
@@ -12953,6 +12988,10 @@
         function hideLoginModal() {
             document.getElementById('loginModal').style.display = 'none';
         }
+        
+        // 전역 함수로 등록
+        window.showLoginModal = showLoginModal;
+        window.hideLoginModal = hideLoginModal;
         
         // ESC 키로 모달 닫기
         document.addEventListener('keydown', function(event) {
