@@ -6960,11 +6960,13 @@
         async function loadAppData() {
             try {
                 // 데모 모드인지 확인
-                if (currentUser && currentUser.id.indexOf('demo-user-') === 0) {
+                if (isDemoMode || (currentUser && currentUser.id.indexOf('demo-user-') === 0)) {
                     // 데모 모드: localStorage 기반
+                    console.log('데모 모드에서 데이터 로드');
                     loadDemoData();
                 } else {
                     // 실제 모드: Supabase 기반
+                    console.log('정식 모드에서 Supabase 데이터 로드');
                     await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
                     await Promise.all([
                         loadTodos(),
@@ -6974,8 +6976,13 @@
                 }
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
-                // 오류 시 데모 모드로 폴백
-                loadDemoData();
+                // 실제 모드에서 오류 시에만 데모 모드로 폴백
+                if (!isDemoMode) {
+                    console.log('실제 모드에서 오류 발생, 데모 모드로 폴백하지 않음');
+                    showNotification('데이터 로드 중 오류가 발생했습니다. 페이지를 새로고침해주세요.', 'error');
+                } else {
+                    loadDemoData();
+                }
             }
         }
         
@@ -7449,6 +7456,12 @@
         
         // 데모 모드 표시기
         function showDemoModeIndicator() {
+            // 기존 표시기 제거
+            const existingIndicator = document.querySelector('.demo-mode-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
             const indicator = document.createElement('div');
             indicator.className = 'demo-mode-indicator';
             indicator.innerHTML = `
@@ -7472,6 +7485,48 @@
                 gap: 10px;
             `;
             document.body.appendChild(indicator);
+        }
+        
+        // 정식 모드 표시기
+        function showProductionModeIndicator() {
+            // 기존 표시기 제거
+            const existingIndicator = document.querySelector('.demo-mode-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'production-mode-indicator';
+            indicator.innerHTML = `
+                <span>🚀 정식 버전</span>
+                <span class="realtime-status connected">실시간 연동</span>
+            `;
+            indicator.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #d1fae5;
+                color: #065f46;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 12px;
+                z-index: 10000;
+                border: 1px solid #34d399;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            document.body.appendChild(indicator);
+            
+            // 3초 후 자동 숨기기
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                indicator.style.transition = 'opacity 0.5s';
+                setTimeout(() => {
+                    indicator.remove();
+                }, 500);
+            }, 3000);
         }
         
         // 브라우저 알림 권한 요청
@@ -11888,15 +11943,60 @@
                     setTimeout(() => {
                         updateNavigationTabs();
                     }, 100);
-                }
-                
-                // 데모 모드가 아니고 실제 사용자인 경우에만 앱 데이터 로드
-                if (!isDemoUser) {
-                    await loadAppData();
-                } else {
+                    
                     // 데모 모드인 경우 데모 데이터 로드
                     console.log('데모 데이터 로드 시작');
                     loadDemoData();
+                } else {
+                    // 실제 사용자 - 정식 모드
+                    isDemoMode = false;
+                    console.log('정식 모드 활성화됨 - 실제 Supabase 데이터 사용');
+                    
+                    // 정식 모드 표시기 표시
+                    showProductionModeIndicator();
+                    
+                    // 사용자 승인 상태 확인 (실제 데이터베이스에서)
+                    try {
+                        const { data: userProfile } = await supabase
+                            .from('users')
+                            .select('account_status, global_role, approved_by, approved_at')
+                            .eq('id', currentUser.id)
+                            .single();
+                        
+                        if (userProfile) {
+                            const status = userProfile.account_status;
+                            console.log('사용자 승인 상태:', status);
+                            
+                            if (status === 'approved') {
+                                // 승인된 사용자 - 앱 데이터 로드
+                                await loadAppData();
+                                return true;
+                            } else if (status === 'pending') {
+                                // 승인 대기 중
+                                showApprovalPending();
+                                return false;
+                            } else if (status === 'rejected') {
+                                // 승인 거부
+                                showApprovalRejected();
+                                return false;
+                            } else if (status === 'suspended') {
+                                // 계정 정지
+                                showAccountSuspended();
+                                return false;
+                            }
+                        } else {
+                            // 새 사용자 - 자동 승인으로 처리 (테스트용)
+                            console.log('새 사용자 - 자동 승인 처리');
+                            await loadAppData();
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error('사용자 상태 확인 오류:', error);
+                        // 오류 시에도 앱 데이터 로드 시도 (테스트용)
+                        console.log('오류 발생, 앱 데이터 로드 시도');
+                        await loadAppData();
+                        return true;
+                    }
                 }
                 
                 return true; // 데모 모드에서는 항상 승인된 것으로 처리
