@@ -4840,7 +4840,7 @@
                     
                     <div class="hero-cta">
                         <button class="cta-primary" onclick="showLoginModal()">
-                            🚀 무료로 시작하기
+                            🔑 로그인
                         </button>
                         <button class="cta-secondary" onclick="loginAsTestUser()">
                             ✨ 데모 체험하기
@@ -6411,6 +6411,42 @@
         // 초기 Supabase 클라이언트 생성
         let supabase = createSupabaseClient();
         
+        // Auth 상태 변화 감지
+        if (supabase) {
+            supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log('Auth 상태 변화:', event, session);
+                
+                if (event === 'SIGNED_IN' && session) {
+                    console.log('로그인 성공, 앱 초기화 중...');
+                    currentUser = session.user;
+                    isDemoMode = false;
+                    
+                    // URL 정리
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has('code') || urlParams.has('access_token')) {
+                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                        window.history.replaceState({}, '', cleanUrl);
+                    }
+                    
+                    // 사용자 프로필 설정 및 앱 표시
+                    try {
+                        const isApproved = await setupUserProfile();
+                        if (isApproved) {
+                            showApp();
+                            await checkUserPermissions(true);
+                            await updateNavigationTabs();
+                        }
+                    } catch (error) {
+                        console.error('로그인 후 설정 오류:', error);
+                    }
+                } else if (event === 'SIGNED_OUT') {
+                    console.log('로그아웃됨, 로그인 화면으로 이동');
+                    currentUser = null;
+                    showLogin();
+                }
+            });
+        }
+        
         // Supabase 연결 상태 확인 및 재연결 함수
         async function checkSupabaseConnection() {
             try {
@@ -6527,9 +6563,17 @@
             // 오류 발생 시 재시도 메커니즘
             let initRetries = 3;
             
-            // URL 파라미터 확인하여 모드 설정
+            // OAuth 콜백 처리 및 URL 파라미터 확인
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'production') {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            
+            // OAuth 콜백인지 확인 (access_token이나 code가 있는 경우)
+            const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token');
+            
+            if (isOAuthCallback) {
+                console.log('OAuth 콜백 감지됨, 세션 처리 중...');
+                isDemoMode = false; // OAuth 로그인은 항상 정식 모드
+            } else if (urlParams.get('mode') === 'production') {
                 console.log('정식 버전 모드로 설정됨');
                 isDemoMode = false;
                 // URL에서 mode 파라미터 제거
@@ -6652,10 +6696,14 @@
             try {
                 console.log('앱 초기화 시작');
                 
-                // 정식 모드가 아닌 경우에만 데모 사용자 확인
-                if (!window.location.search.includes('mode=production')) {
+                // OAuth 콜백이 아니고 정식 모드가 아닌 경우에만 데모 사용자 확인
+                const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token');
+                
+                if (!isOAuthCallback && !window.location.search.includes('mode=production')) {
                     const savedDemoUser = localStorage.getItem('demo_user');
-                    if (savedDemoUser) {
+                    if (savedDemoUser && !isDemoMode === false) { // isDemoMode가 false로 설정되지 않은 경우에만
                         console.log('저장된 데모 사용자 발견, 데모 모드로 시작');
                         currentUser = JSON.parse(savedDemoUser);
                         isDemoMode = true;
@@ -6674,7 +6722,17 @@
                 const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
                 
                 if (session) {
+                    console.log('세션 발견됨:', session);
                     currentUser = session.user;
+                    isDemoMode = false; // 실제 로그인은 항상 정식 모드
+                    
+                    // OAuth 콜백 URL 정리
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has('code') || urlParams.has('access_token')) {
+                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                        window.history.replaceState({}, '', cleanUrl);
+                    }
+                    
                     // 사용자 프로필 설정 및 승인 상태 확인
                     const isApproved = await setupUserProfile();
                     
@@ -11425,7 +11483,7 @@
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: window.location.origin + window.location.pathname + '?mode=production',
+                        redirectTo: window.location.origin + window.location.pathname,
                         queryParams: {
                             access_type: 'offline',
                             prompt: 'consent'
