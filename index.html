@@ -6723,21 +6723,38 @@
                 const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
                 
                 if (session) {
+                    console.log('Supabase 세션 발견:', {
+                        userId: session.user.id,
+                        email: session.user.email,
+                        provider: session.user.app_metadata.provider
+                    });
+                    
                     currentUser = session.user;
+                    
                     // 사용자 프로필 설정 및 승인 상태 확인
                     const isApproved = await setupUserProfile();
                     
+                    console.log('setupUserProfile 결과:', isApproved);
+                    
                     // 승인된 사용자만 앱 사용 가능
                     if (isApproved) {
+                        console.log('사용자 승인됨, 앱 화면 표시');
                         showApp();
                         
-                        // 서버 측 권한 정보 가져오기 및 네비게이션 업데이트
-                        try {
-                            await checkUserPermissions(true);  // 서버 측 권한 강제 확인
-                            await updateNavigationTabs();     // 네비게이션 탭 업데이트
-                        } catch (permError) {
-                            console.error('권한 정보 로드 오류:', permError);
-                            // 오류가 발생해도 계속 진행 (클라이언트 측 권한으로 폴백)
+                        // 실제 사용자인 경우에만 서버 측 권한 확인
+                        if (!isDemoMode) {
+                            try {
+                                await checkUserPermissions(true);  // 서버 측 권한 강제 확인
+                                await updateNavigationTabs();     // 네비게이션 탭 업데이트
+                            } catch (permError) {
+                                console.error('권한 정보 로드 오류:', permError);
+                                // 오류가 발생해도 계속 진행 (클라이언트 측 권한으로 폴백)
+                            }
+                        } else {
+                            // 데모 모드인 경우 네비게이션 탭만 업데이트
+                            setTimeout(() => {
+                                updateNavigationTabs();
+                            }, 100);
                         }
                     }
                     // 나머지 상태(pending, rejected, suspended)는 각각의 화면이 setupUserProfile에서 표시됨
@@ -6836,6 +6853,56 @@
         // 사용자 프로필 설정 및 승인 상태 확인
         async function setupUserProfile() {
             try {
+                if (!currentUser) return false;
+                
+                // 데모 모드인지 먼저 확인
+                const isDemoUser = currentUser.id.startsWith('demo-user-') || 
+                                   currentUser.email === 'demo@teamtodo.test';
+                
+                console.log('사용자 프로필 설정:', {
+                    userId: currentUser.id,
+                    email: currentUser.email,
+                    isDemoUser: isDemoUser
+                });
+                
+                // 데모 사용자인 경우 데모 모드로 처리
+                if (isDemoUser) {
+                    console.log('데모 사용자 감지, 데모 모드 활성화');
+                    isDemoMode = true;
+                    
+                    // 데모 사용자에게 관리자 권한 부여
+                    currentUser.app_metadata = {
+                        ...currentUser.app_metadata,
+                        account_status: 'approved',
+                        global_role: 'super_admin'
+                    };
+                    
+                    // UI 업데이트
+                    const userName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+                    if (document.getElementById('userName')) {
+                        document.getElementById('userName').textContent = userName;
+                    }
+                    if (document.getElementById('userAvatar')) {
+                        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                    }
+                    
+                    // 데모 데이터 로드
+                    loadDemoData();
+                    return true;
+                }
+                
+                // 실제 사용자 처리
+                console.log('실제 사용자 처리 시작');
+                isDemoMode = false; // 명시적으로 데모 모드 비활성화
+                
+                // 첫 번째 사용자인지 확인 (전체 사용자 수 확인)
+                const { count: totalUsers } = await supabase
+                    .from('users')
+                    .select('*', { count: 'exact', head: true });
+                
+                const isFirstUser = totalUsers === 0;
+                console.log('첫 번째 사용자 여부:', isFirstUser);
+                
                 // 사용자 정보 확인/생성
                 const { data: existingUser } = await supabase
                     .from('users')
@@ -6844,18 +6911,27 @@
                     .single();
                 
                 if (!existingUser) {
-                    // 새 사용자 생성 - 기본적으로 승인 대기 상태
+                    // 새 사용자 생성
+                    const newUserData = {
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
+                        avatar_url: currentUser.user_metadata.avatar_url,
+                        display_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
+                        account_status: isFirstUser ? 'approved' : 'pending',
+                        global_role: isFirstUser ? 'super_admin' : 'user'
+                    };
+                    
+                    // 첫 번째 사용자인 경우 자동 승인
+                    if (isFirstUser) {
+                        newUserData.approved_by = currentUser.id;
+                        newUserData.approved_at = new Date().toISOString();
+                        console.log('첫 번째 사용자 자동 승인 및 관리자 권한 부여');
+                    }
+                    
                     const { error } = await supabase
                         .from('users')
-                        .insert({
-                            id: currentUser.id,
-                            email: currentUser.email,
-                            full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-                            avatar_url: currentUser.user_metadata.avatar_url,
-                            display_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-                            account_status: 'pending',
-                            global_role: 'user'
-                        });
+                        .insert(newUserData);
                     
                     if (error) throw error;
                     
@@ -6868,8 +6944,8 @@
                         
                     currentUser.app_metadata = {
                         ...currentUser.app_metadata,
-                        account_status: 'pending',
-                        global_role: 'user'
+                        account_status: newUser.account_status,
+                        global_role: newUser.global_role
                     };
                     
                     return await checkApprovalStatus(newUser);
@@ -6887,13 +6963,30 @@
                 
             } catch (error) {
                 console.error('사용자 프로필 설정 오류:', error);
-                return false;
+                
+                // 실제 사용자인 경우 오류 발생 시 승인 대기 화면 표시
+                if (!currentUser.id.startsWith('demo-user-') && currentUser.email !== 'demo@teamtodo.test') {
+                    showApprovalPendingScreen();
+                    return false;
+                }
+                
+                // 데모 사용자인 경우만 데모 모드로 전환
+                isDemoMode = true;
+                loadDemoData();
+                return true;
             }
         }
         
         // 사용자 승인 상태 확인
         async function checkApprovalStatus(user) {
             if (!user) return false;
+            
+            console.log('사용자 승인 상태 확인:', {
+                userId: user.id,
+                email: user.email,
+                status: user.account_status,
+                role: user.global_role
+            });
             
             // UI 업데이트
             const userName = user.display_name || user.full_name || user.email.split('@')[0];
@@ -6913,26 +7006,44 @@
                 adminTab.style.display = isAdmin ? 'block' : 'none';
             }
             
-            // 네비게이션 탭 권한 업데이트
-            setTimeout(() => {
-                updateNavigationTabs();
-            }, 100);
-            
             // 승인 상태에 따른 처리
             switch (user.account_status) {
                 case 'approved':
+                    console.log('사용자 승인됨, 앱 데이터 로드 시작');
                     // 승인된 사용자는 앱 사용 가능
+                    await loadAppData(); // 실제 앱 데이터 로드
+                    
+                    // 네비게이션 탭 권한 업데이트
+                    setTimeout(() => {
+                        updateNavigationTabs();
+                    }, 100);
+                    
                     return true;
                     
                 case 'pending':
+                    console.log('사용자 승인 대기, 대기 화면 표시');
                     // 승인 대기 중인 사용자는 대기 화면 표시
                     showApprovalPendingScreen();
                     return false;
                     
                 case 'rejected':
+                    console.log('사용자 승인 거부, 거부 화면 표시');
                     // 거부된 사용자는 거부 화면 표시
                     showApprovalRejectedScreen();
                     return false;
+                    
+                case 'suspended':
+                    console.log('사용자 계정 정지, 정지 화면 표시');
+                    // 정지된 사용자 처리
+                    showApprovalRejectedScreen(); // 임시로 거부 화면 사용
+                    return false;
+                    
+                default:
+                    console.warn('알 수 없는 계정 상태:', user.account_status);
+                    showApprovalPendingScreen();
+                    return false;
+            }
+        }
                     
                 case 'suspended':
                     // 정지된 사용자는 정지 화면 표시
@@ -6950,23 +7061,39 @@
         // 앱 데이터 로드
         async function loadAppData() {
             try {
-                // 데모 모드인지 확인
-                if (currentUser && currentUser.id.indexOf('demo-user-') === 0) {
-                    // 데모 모드: localStorage 기반
+                console.log('실제 앱 데이터 로드 시작');
+                
+                // 데모 모드 확인 (안전장치)
+                if (isDemoMode || (currentUser && currentUser.id.startsWith('demo-user-'))) {
+                    console.log('데모 모드 감지, 데모 데이터 로드');
                     loadDemoData();
-                } else {
-                    // 실제 모드: Supabase 기반
-                    await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
-                    await Promise.all([
-                        loadTodos(),
-                        loadNotifications(),
-                        updateDashboard()
-                    ]);
+                    return;
                 }
+                
+                console.log('실제 Supabase 데이터 로드 시작');
+                
+                // 실제 모드: Supabase 기반 데이터 로드
+                await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
+                
+                // 병렬로 데이터 로드
+                await Promise.all([
+                    loadTodos(),
+                    loadNotifications(),
+                    updateDashboard()
+                ]);
+                
+                console.log('실제 앱 데이터 로드 완료');
+                
+                // 실시간 구독 초기화 (워크스페이스가 로드된 후)
+                if (currentWorkspace) {
+                    initializeRealtimeSubscriptions();
+                }
+                
             } catch (error) {
-                console.error('데이터 로드 오류:', error);
-                // 오류 시 데모 모드로 폴백
-                loadDemoData();
+                console.error('실제 데이터 로드 오류:', error);
+                showNotification('데이터 로드 중 오류가 발생했습니다.', 'error');
+                // 실제 사용자의 경우 오류 시 빈 상태로 시작 (데모 모드로 폴백하지 않음)
+                console.log('빈 상태로 앱 시작');
             }
         }
         
@@ -7440,6 +7567,12 @@
         
         // 데모 모드 표시기
         function showDemoModeIndicator() {
+            // 이미 표시기가 있는지 확인
+            const existingIndicator = document.querySelector('.demo-mode-indicator');
+            if (existingIndicator) {
+                return; // 이미 표시되어 있으면 중복 생성 방지
+            }
+            
             const indicator = document.createElement('div');
             indicator.className = 'demo-mode-indicator';
             indicator.innerHTML = `
@@ -7463,6 +7596,14 @@
                 gap: 10px;
             `;
             document.body.appendChild(indicator);
+        }
+        
+        // 데모 모드 표시기 제거
+        function hideDemoModeIndicator() {
+            const indicator = document.querySelector('.demo-mode-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
         }
         
         // 브라우저 알림 권한 요청
@@ -11808,99 +11949,7 @@
             }
         }
         
-        // 데모 모드용 setupUserProfile 수정
-        async function setupUserProfile() {
-            try {
-                if (!currentUser) return;
-                
-                // 데모 모드인지 먼저 확인
-                const isDemoUser = currentUser.id.indexOf('demo-user-') === 0 || currentUser.email === 'demo@teamtodo.test';
-                
-                // 실제 Supabase 사용자인 경우에만 DB 작업 수행
-                if (!isDemoUser) {
-                    // 사용자 정보 확인/생성
-                    const { data: existingUser } = await supabase
-                        .from('users')
-                        .select('*')
-                        .eq('id', currentUser.id)
-                        .single();
-                    
-                    if (!existingUser) {
-                        // 새 사용자 생성
-                        const { error } = await supabase
-                            .from('users')
-                            .insert({
-                                id: currentUser.id,
-                                email: currentUser.email,
-                                full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-                                avatar_url: currentUser.user_metadata.avatar_url
-                            });
-                        
-                        if (error) throw error;
-                    }
-                }
-                
-                // UI 업데이트 (DOM 요소 존재 확인)
-                const userName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
-                const userNameElement = document.getElementById('userName');
-                const userAvatarElement = document.getElementById('userAvatar');
-                
-                if (userNameElement) {
-                    userNameElement.textContent = userName;
-                } else {
-                    console.warn('userName 요소를 찾을 수 없습니다');
-                }
-                
-                if (userAvatarElement) {
-                    userAvatarElement.textContent = userName.charAt(0).toUpperCase();
-                } else {
-                    console.warn('userAvatar 요소를 찾을 수 없습니다');
-                }
-                
-                // 데모 모드 확인 및 설정
-                if (isDemoUser) {
-                    isDemoMode = true;
-                    console.log('데모 모드 활성화됨');
-                    
-                    // 데모 모드에서는 사용자에게 관리자 권한 부여
-                    currentUser.app_metadata = {
-                        ...currentUser.app_metadata,
-                        account_status: 'approved',
-                        global_role: 'super_admin'
-                    };
-                    
-                    // 관리자 탭 표시
-                    const adminTab = document.getElementById('adminNavTab');
-                    if (adminTab) {
-                        adminTab.style.display = 'block';
-                    }
-                    
-                    // 네비게이션 탭 권한 업데이트
-                    setTimeout(() => {
-                        updateNavigationTabs();
-                    }, 100);
-                }
-                
-                // 데모 모드가 아니고 실제 사용자인 경우에만 앱 데이터 로드
-                if (!isDemoUser) {
-                    await loadAppData();
-                } else {
-                    // 데모 모드인 경우 데모 데이터 로드
-                    console.log('데모 데이터 로드 시작');
-                    loadDemoData();
-                }
-                
-                return true; // 데모 모드에서는 항상 승인된 것으로 처리
-                
-            } catch (error) {
-                console.error('사용자 프로필 설정 오류:', error);
-                // 오류가 있어도 데모 모드로 계속 진행
-                isDemoMode = true;
-                console.log('오류 발생, 데모 모드로 전환');
-                loadDemoData();
-                return true; // 오류가 있어도 계속 진행
-            }
-        }
+
         
         // Enter 키 처리
         document.addEventListener('keypress', function(event) {
@@ -11931,6 +11980,7 @@
                 isDemoMode = false;
                 
                 // 데모 모드 표시기 제거
+                hideDemoModeIndicator();
                 const demoIndicator = document.querySelector('.demo-mode-indicator');
                 if (demoIndicator) {
                     demoIndicator.remove();
@@ -11946,12 +11996,40 @@
         
         // 인증 상태 변화 감지
         supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('인증 상태 변화:', event, session ? 'session 있음' : 'session 없음');
+            
             if (event === 'SIGNED_IN' && session) {
+                console.log('구글 OAuth 로그인 성공 감지');
                 currentUser = session.user;
-                await setupUserProfile();
-                showApp();
+                
+                // 사용자 프로필 설정 및 승인 상태 확인
+                const isApproved = await setupUserProfile();
+                
+                if (isApproved) {
+                    console.log('로그인 모달 숨기기 및 앱 표시');
+                    hideLoginModal(); // 로그인 모달 닫기
+                    showApp();
+                    
+                    // 실제 사용자인 경우에만 실시간 구독 및 권한 확인
+                    if (!isDemoMode) {
+                        try {
+                            await checkUserPermissions(true);
+                            await updateNavigationTabs();
+                            initializeRealtimeSubscriptions(); // 실시간 구독 시작
+                        } catch (error) {
+                            console.error('권한 확인 오류:', error);
+                        }
+                    } else {
+                        setTimeout(() => {
+                            updateNavigationTabs();
+                        }, 100);
+                    }
+                }
+                // pending/rejected 상태는 setupUserProfile에서 처리
             } else if (event === 'SIGNED_OUT') {
+                console.log('로그아웃 감지');
                 showLogin();
+                cleanupRealtimeSubscriptions(); // 실시간 구독 정리
             }
         });
         
