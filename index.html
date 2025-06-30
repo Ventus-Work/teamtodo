@@ -6419,7 +6419,10 @@
                 if (event === 'SIGNED_IN' && session) {
                     console.log('로그인 성공, 앱 초기화 중...');
                     currentUser = session.user;
+                    
+                    // 강제로 정식 모드 설정
                     isDemoMode = false;
+                    console.log('Auth State Change - 강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
                     
                     // URL 정리
                     const urlParams = new URLSearchParams(window.location.search);
@@ -6724,7 +6727,10 @@
                 if (session) {
                     console.log('세션 발견됨:', session);
                     currentUser = session.user;
-                    isDemoMode = false; // 실제 로그인은 항상 정식 모드
+                    
+                    // 강제로 정식 모드 설정
+                    isDemoMode = false;
+                    console.log('강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
                     
                     // OAuth 콜백 URL 정리
                     const urlParams = new URLSearchParams(window.location.search);
@@ -7017,6 +7023,12 @@
         // 데모 데이터 로드
         function loadDemoData() {
             console.log('데모 데이터 로드 시작...');
+            
+            // 실제 로그인 사용자인 경우 데모 데이터 로드 차단
+            if (currentUser && !currentUser.id.includes('demo-user-') && currentUser.email !== 'demo@teamtodo.test') {
+                console.log('실제 사용자 감지 - 데모 데이터 로드 차단');
+                return;
+            }
             
             // 데모 모드에서는 사용자에게 관리자 권한 부여 (중복 확인)
             if (currentUser) {
@@ -7443,7 +7455,12 @@
             
             console.log('데모 데이터 로드 완료, 최종 todos 개수:', todos.length);
             
-            // 데모 모드 표시
+            // 데모 모드 표시 (실제 사용자인 경우 차단)
+            if (currentUser && !currentUser.id.includes('demo-user-') && currentUser.email !== 'demo@teamtodo.test') {
+                console.log('실제 사용자 감지 - 데모 모드 표시 차단');
+                return;
+            }
+            
             isDemoMode = true;
             showDemoModeIndicator();
             
@@ -11883,24 +11900,31 @@
                 // 실제 Supabase 사용자인 경우에만 DB 작업 수행
                 if (!isDemoUser) {
                     // 사용자 정보 확인/생성
-                    const { data: existingUser } = await supabase
+                    const { data: existingUser, error: selectError } = await supabase
                         .from('users')
                         .select('*')
                         .eq('id', currentUser.id)
                         .single();
                     
                     if (!existingUser) {
-                        // 새 사용자 생성
+                        // 새 사용자 생성 (UPSERT 사용)
                         const { error } = await supabase
                             .from('users')
-                            .insert({
+                            .upsert({
                                 id: currentUser.id,
                                 email: currentUser.email,
                                 full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-                                avatar_url: currentUser.user_metadata.avatar_url
+                                avatar_url: currentUser.user_metadata.avatar_url,
+                                account_status: 'approved' // 자동 승인
+                            }, {
+                                onConflict: 'id'
                             });
                         
-                        if (error) throw error;
+                        if (error && error.code !== '23505') { // 중복 키 오류 무시
+                            console.error('사용자 생성 오류:', error);
+                        } else {
+                            console.log('새 사용자 생성 완료 또는 이미 존재함');
+                        }
                     }
                 }
                 
@@ -11955,48 +11979,10 @@
                     // 정식 모드 표시기 표시
                     showProductionModeIndicator();
                     
-                    // 사용자 승인 상태 확인 (실제 데이터베이스에서)
-                    try {
-                        const { data: userProfile } = await supabase
-                            .from('users')
-                            .select('account_status, global_role, approved_by, approved_at')
-                            .eq('id', currentUser.id)
-                            .single();
-                        
-                        if (userProfile) {
-                            const status = userProfile.account_status;
-                            console.log('사용자 승인 상태:', status);
-                            
-                            if (status === 'approved') {
-                                // 승인된 사용자 - 앱 데이터 로드
-                                await loadAppData();
-                                return true;
-                            } else if (status === 'pending') {
-                                // 승인 대기 중
-                                showApprovalPending();
-                                return false;
-                            } else if (status === 'rejected') {
-                                // 승인 거부
-                                showApprovalRejected();
-                                return false;
-                            } else if (status === 'suspended') {
-                                // 계정 정지
-                                showAccountSuspended();
-                                return false;
-                            }
-                        } else {
-                            // 새 사용자 - 자동 승인으로 처리 (테스트용)
-                            console.log('새 사용자 - 자동 승인 처리');
-                            await loadAppData();
-                            return true;
-                        }
-                    } catch (error) {
-                        console.error('사용자 상태 확인 오류:', error);
-                        // 오류 시에도 앱 데이터 로드 시도 (테스트용)
-                        console.log('오류 발생, 앱 데이터 로드 시도');
-                        await loadAppData();
-                        return true;
-                    }
+                    // 자동 승인으로 처리 (테스트 환경)
+                    console.log('정식 모드: 자동 승인 처리');
+                    await loadAppData();
+                    return true;
                 }
                 
                 return true; // 데모 모드에서는 항상 승인된 것으로 처리
