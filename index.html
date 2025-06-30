@@ -4839,10 +4839,10 @@
                     </div>
                     
                     <div class="hero-cta">
-                        <button class="cta-primary" onclick="showLoginModal()">
+                        <button class="cta-primary" id="loginBtn">
                             🔑 로그인
                         </button>
-                        <button class="cta-secondary" onclick="loginAsTestUser()">
+                        <button class="cta-secondary" id="demoBtn">
                             ✨ 데모 체험하기
                         </button>
                     </div>
@@ -6393,6 +6393,102 @@
         console.log('Supabase URL:', SUPABASE_URL);
         console.log('Supabase Key 확인:', SUPABASE_ANON_KEY ? '설정됨' : '없음');
         
+        // ==================== 즉시 전역 함수 정의 ====================
+        // 스크립트 로드 즉시 전역 함수들을 정의
+        window.showLoginModal = function() {
+            console.log('전역 showLoginModal 호출됨');
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            } else {
+                console.error('loginModal 요소를 찾을 수 없습니다');
+            }
+        };
+        
+        window.hideLoginModal = function() {
+            console.log('전역 hideLoginModal 호출됨');
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        };
+        
+        window.loginAsTestUser = function() {
+            console.log('전역 loginAsTestUser 호출됨');
+            
+            const btn = event ? event.target : null;
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0;"></div> 데모 모드 시작 중...';
+                
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }, 3000);
+            }
+            
+            // 모달 닫기
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // 가짜 사용자 데이터 생성
+            window.currentUser = {
+                id: 'demo-user-' + Date.now(),
+                email: 'demo@teamtodo.test',
+                user_metadata: {
+                    full_name: '데모 사용자'
+                },
+                app_metadata: {
+                    account_status: 'approved',
+                    global_role: 'super_admin'
+                }
+            };
+            
+            // 데모 모드 설정
+            window.isDemoMode = true;
+            
+            // 로컬 스토리지에 저장
+            localStorage.setItem('demo_user', JSON.stringify(window.currentUser));
+            
+            console.log('데모 사용자 생성 완료:', window.currentUser);
+            
+            // 앱 표시 시도
+            setTimeout(() => {
+                try {
+                    // 로딩 숨기기
+                    const loading = document.getElementById('loading');
+                    if (loading) loading.style.display = 'none';
+                    
+                    // 로그인 컨테이너 숨기기
+                    const loginContainer = document.getElementById('loginContainer');
+                    if (loginContainer) loginContainer.style.display = 'none';
+                    
+                    // 앱 컨테이너 표시
+                    const appContainer = document.getElementById('appContainer');
+                    if (appContainer) {
+                        appContainer.classList.add('show');
+                        appContainer.style.display = 'block';
+                    }
+                    
+                    // 성공 알림
+                    alert('데모 모드로 진입했습니다! 🎉');
+                    
+                    // 데모 데이터 로드 시도
+                    if (typeof window.loadDemoData === 'function') {
+                        window.loadDemoData();
+                    }
+                    
+                } catch (error) {
+                    console.error('앱 표시 오류:', error);
+                }
+            }, 500);
+        };
+        
+        console.log('전역 함수들이 즉시 정의되었습니다');
+        
         // Supabase 연결 관리를 위한 함수
         function createSupabaseClient() {
             try {
@@ -6572,6 +6668,105 @@
             window.showLoginModal = showLoginModal;
             window.hideLoginModal = hideLoginModal;
             window.loginAsTestUser = loginAsTestUser;
+            
+            // 버튼 이벤트 리스너 추가
+            const loginBtn = document.getElementById('loginBtn');
+            const demoBtn = document.getElementById('demoBtn');
+            
+            if (loginBtn) {
+                loginBtn.addEventListener('click', function() {
+                    console.log('로그인 버튼 클릭됨');
+                    try {
+                        showLoginModal();
+                    } catch (error) {
+                        console.error('로그인 모달 표시 오류:', error);
+                        // 직접 실행
+                        const modal = document.getElementById('loginModal');
+                        if (modal) {
+                            modal.style.display = 'flex';
+                        }
+                    }
+                });
+            }
+            
+            if (demoBtn) {
+                demoBtn.addEventListener('click', function() {
+                    console.log('데모 버튼 클릭됨');
+                    try {
+                        loginAsTestUser();
+                    } catch (error) {
+                        console.error('데모 로그인 오류:', error);
+                        // 직접 데모 모드 시작
+                        startDemoMode();
+                    }
+                });
+            }
+            
+            // 백업 함수들 정의
+            window.startDemoMode = function() {
+                console.log('백업 데모 모드 시작 함수 호출됨');
+                
+                const modal = document.getElementById('loginModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+                
+                // 가짜 사용자 데이터 생성
+                currentUser = {
+                    id: 'demo-user-' + Date.now(),
+                    email: 'demo@teamtodo.test',
+                    user_metadata: {
+                        full_name: '데모 사용자'
+                    },
+                    app_metadata: {
+                        account_status: 'approved',
+                        global_role: 'super_admin'
+                    }
+                };
+                
+                // 데모 모드 설정
+                isDemoMode = true;
+                
+                // 로컬 스토리지에 저장
+                localStorage.setItem('demo_user', JSON.stringify(currentUser));
+                
+                console.log('데모 사용자 생성 완료:', currentUser);
+                
+                // 앱 표시
+                if (typeof showApp === 'function') {
+                    showApp();
+                } else {
+                    console.log('showApp 함수를 찾을 수 없음');
+                    // 직접 앱 표시
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('appContainer').classList.add('show');
+                }
+                
+                // 데모 데이터 로드
+                if (typeof loadDemoData === 'function') {
+                    loadDemoData();
+                } else {
+                    console.log('loadDemoData 함수를 찾을 수 없음');
+                }
+                
+                // 성공 알림
+                if (typeof showNotification === 'function') {
+                    showNotification('데모 모드로 진입했습니다! 🎉', 'success');
+                } else {
+                    alert('데모 모드로 진입했습니다! 🎉');
+                }
+            };
+            
+            window.showLoginModalDirect = function() {
+                console.log('백업 로그인 모달 표시 함수 호출됨');
+                const modal = document.getElementById('loginModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                } else {
+                    console.error('로그인 모달을 찾을 수 없습니다');
+                }
+            };
             
             // 편집 모달 날짜 선택기 초기화
             flatpickr("#editTodoDueDate", {
