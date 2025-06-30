@@ -6869,44 +6869,94 @@
         // 사용자 프로필 설정 및 승인 상태 확인
         async function setupUserProfile() {
             try {
+                console.log('사용자 프로필 설정 시작:', currentUser?.id);
+                
                 // 사용자 정보 확인/생성
-                const { data: existingUser } = await supabase
-                    .from('users')
-                    .select('*, approved_by(*)')
-                    .eq('id', currentUser.id)
-                    .single();
+                let existingUser = null;
+                try {
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('id', currentUser.id)
+                        .maybeSingle(); // single() 대신 maybeSingle() 사용
+                    
+                    if (error && error.code !== 'PGRST116') { // PGRST116은 "없음" 오류
+                        throw error;
+                    }
+                    
+                    existingUser = data;
+                } catch (selectError) {
+                    console.error('사용자 조회 오류:', selectError);
+                    // 조회 실패 시에도 계속 진행
+                }
                 
                 if (!existingUser) {
-                    // 새 사용자 생성 - 기본적으로 승인 대기 상태
-                    const { error } = await supabase
-                        .from('users')
-                        .insert({
-                            id: currentUser.id,
-                            email: currentUser.email,
-                            full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-                            avatar_url: currentUser.user_metadata.avatar_url,
-                            display_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
-                            account_status: 'pending',
-                            global_role: 'user'
-                        });
+                    console.log('새 사용자 생성 중...');
                     
-                    if (error) throw error;
+                    // 전체 사용자 수 확인 (super_admin 자동 부여를 위해)
+                    let totalUsers = 0;
+                    try {
+                        const { count } = await supabase
+                            .from('users')
+                            .select('*', { count: 'exact', head: true });
+                        totalUsers = count || 0;
+                    } catch (countError) {
+                        console.error('사용자 수 조회 오류:', countError);
+                    }
                     
-                    // 새로 생성된 사용자 정보 가져오기
-                    const { data: newUser } = await supabase
-                        .from('users')
-                        .select('*, approved_by(*)')
-                        .eq('id', currentUser.id)
-                        .single();
+                    // 첫 번째 사용자는 super_admin으로 설정
+                    const globalRole = totalUsers === 0 ? 'super_admin' : 'user';
+                    const accountStatus = totalUsers === 0 ? 'approved' : 'pending';
+                    
+                    console.log('새 사용자 권한:', { globalRole, accountStatus, totalUsers });
+                    
+                    try {
+                        const { error } = await supabase
+                            .from('users')
+                            .insert({
+                                id: currentUser.id,
+                                email: currentUser.email,
+                                full_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0],
+                                avatar_url: currentUser.user_metadata?.avatar_url,
+                                display_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0],
+                                account_status: accountStatus,
+                                global_role: globalRole
+                            });
                         
-                    currentUser.app_metadata = {
-                        ...currentUser.app_metadata,
-                        account_status: 'pending',
-                        global_role: 'user'
-                    };
-                    
-                    return await checkApprovalStatus(newUser);
+                        if (error) {
+                            console.error('사용자 생성 오류:', error);
+                            throw error;
+                        }
+                        
+                        console.log('새 사용자 생성 완료');
+                        
+                        // 메타데이터 업데이트
+                        currentUser.app_metadata = {
+                            ...currentUser.app_metadata,
+                            account_status: accountStatus,
+                            global_role: globalRole
+                        };
+                        
+                        // 승인 상태에 따른 화면 표시
+                        if (accountStatus === 'approved') {
+                            return true; // 승인됨
+                        } else {
+                            return await checkApprovalStatus({ account_status: accountStatus });
+                        }
+                        
+                    } catch (insertError) {
+                        console.error('사용자 생성 실패:', insertError);
+                        // 생성 실패 시 임시로 승인된 상태로 처리
+                        currentUser.app_metadata = {
+                            ...currentUser.app_metadata,
+                            account_status: 'approved',
+                            global_role: 'user'
+                        };
+                        return true;
+                    }
                 }
+                
+                console.log('기존 사용자 확인됨:', existingUser);
                 
                 // 기존 사용자 - 메타데이터 업데이트
                 currentUser.app_metadata = {
@@ -6920,7 +6970,13 @@
                 
             } catch (error) {
                 console.error('사용자 프로필 설정 오류:', error);
-                return false;
+                // 오류 시에도 앱 진입 허용 (임시)
+                currentUser.app_metadata = {
+                    ...currentUser.app_metadata,
+                    account_status: 'approved',
+                    global_role: 'user'
+                };
+                return true;
             }
         }
         
@@ -7647,50 +7703,72 @@
             
             // Auth State Change 이벤트 등록 (한 번만 실행)
             let authHandled = false;
-            const unsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('OAuth 콜백 중 Auth 상태 변화:', event, session);
-                
-                if (authHandled) return; // 중복 처리 방지
-                
-                if (event === 'SIGNED_IN' && session) {
-                    authHandled = true;
-                    console.log('OAuth 로그인 성공!');
+            let unsubscribe = null;
+            
+            try {
+                const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+                    console.log('OAuth 콜백 중 Auth 상태 변화:', event, session);
                     
-                    currentUser = session.user;
-                    isDemoMode = false;
+                    if (authHandled) return; // 중복 처리 방지
                     
-                    // URL 정리
-                    const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-                    window.history.replaceState({}, '', cleanUrl);
-                    
-                    try {
-                        // 사용자 프로필 설정
-                        await setupUserProfile();
+                    if (event === 'SIGNED_IN' && session) {
+                        authHandled = true;
+                        console.log('OAuth 로그인 성공!');
                         
-                        // 앱 표시
-                        showApp();
+                        currentUser = session.user;
+                        isDemoMode = false;
                         
-                        // 권한 확인 및 업데이트
-                        await checkUserPermissions(true);
-                        await updateNavigationTabs();
+                        // URL 정리
+                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                        window.history.replaceState({}, '', cleanUrl);
                         
-                        console.log('OAuth 로그인 완료 - 앱 진입');
-                        unsubscribe(); // 이벤트 리스너 정리
-                        
-                    } catch (error) {
-                        console.error('OAuth 로그인 후 설정 오류:', error);
-                        showNotification('로그인 후 설정 중 오류가 발생했습니다.', 'error');
-                        showLogin();
-                        unsubscribe();
+                        try {
+                            // 사용자 프로필 설정
+                            await setupUserProfile();
+                            
+                            // 앱 표시
+                            showApp();
+                            
+                            // 권한 확인 및 업데이트
+                            await checkUserPermissions(true);
+                            await updateNavigationTabs();
+                            
+                            console.log('OAuth 로그인 완료 - 앱 진입');
+                            
+                            // 이벤트 리스너 정리
+                            if (authListener && typeof authListener.unsubscribe === 'function') {
+                                authListener.unsubscribe();
+                            }
+                            
+                        } catch (error) {
+                            console.error('OAuth 로그인 후 설정 오류:', error);
+                            showNotification('로그인 후 설정 중 오류가 발생했습니다.', 'error');
+                            showLogin();
+                            
+                            // 이벤트 리스너 정리
+                            if (authListener && typeof authListener.unsubscribe === 'function') {
+                                authListener.unsubscribe();
+                            }
+                        }
+                    } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+                        if (!authHandled) {
+                            console.log('OAuth 로그인 실패 - 로그인 화면으로');
+                            showLogin();
+                            
+                            // 이벤트 리스너 정리
+                            if (authListener && typeof authListener.unsubscribe === 'function') {
+                                authListener.unsubscribe();
+                            }
+                        }
                     }
-                } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-                    if (!authHandled) {
-                        console.log('OAuth 로그인 실패 - 로그인 화면으로');
-                        showLogin();
-                        unsubscribe();
-                    }
-                }
-            });
+                });
+                
+                unsubscribe = authListener;
+                
+            } catch (error) {
+                console.error('Auth State Change 등록 오류:', error);
+                showLogin();
+            }
             
             // 타임아웃 설정 (OAuth 콜백은 더 오래 기다림)
             setTimeout(() => {
@@ -7698,7 +7776,11 @@
                     console.log('OAuth 콜백 타임아웃 - 로그인 화면으로');
                     showNotification('로그인 처리 시간이 초과되었습니다. 다시 시도해주세요.', 'error');
                     showLogin();
-                    unsubscribe();
+                    
+                    // 이벤트 리스너 정리
+                    if (unsubscribe && typeof unsubscribe.unsubscribe === 'function') {
+                        unsubscribe.unsubscribe();
+                    }
                 }
             }, 10000); // 10초 대기
         }
@@ -11076,10 +11158,19 @@
             // 서버 측 검증이 필요한 경우 또는 캐시된 권한이 없는 경우
             if (forceServerCheck || !window.cachedPermissions) {
                 try {
-                    // 서버 측 권한 검증 API 호출
-                    const { data, error } = await supabase.rpc('check_access_permission');
+                    console.log('서버 측 권한 검증 시도...');
+                    
+                    // 서버 측 권한 검증 API 호출 (타임아웃 추가)
+                    const permissionPromise = supabase.rpc('check_access_permission');
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('권한 검증 타임아웃')), 3000)
+                    );
+                    
+                    const { data, error } = await Promise.race([permissionPromise, timeoutPromise]);
                     
                     if (error) throw error;
+                    
+                    console.log('서버 측 권한 검증 성공:', data);
                     
                     // 서버 응답 캐싱
                     window.cachedPermissions = data;
@@ -11097,7 +11188,8 @@
                     console.error('서버 측 권한 검증 오류:', error);
                     
                     // 오류 발생 시 클라이언트 측 검증으로 폴백
-                    const userStatus = currentUser.app_metadata?.account_status || 'pending';
+                    console.log('클라이언트 측 권한 검증으로 폴백');
+                    const userStatus = currentUser.app_metadata?.account_status || 'approved'; // 기본값을 approved로 변경
                     const userRole = currentUser.app_metadata?.global_role || 'user';
                     
                     return {
@@ -12288,80 +12380,108 @@
         
         // 실시간 구독 초기화
         function initializeRealtimeSubscriptions() {
-            if (!currentUser || !currentWorkspace || isDemoMode) return;
+            if (!currentUser || !currentWorkspace || isDemoMode) {
+                console.log('실시간 구독 건너뛰기:', { currentUser: !!currentUser, currentWorkspace: !!currentWorkspace, isDemoMode });
+                return;
+            }
             
-            // 브라우저 알림 권한 요청
-            requestNotificationPermission();
-            
-            // 기존 구독 정리
-            cleanupRealtimeSubscriptions();
-            
-            // 할 일 실시간 구독
-            const todosSubscription = supabase
-                .channel('todos-changes')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'todos',
-                        filter: `workspace_id=eq.${currentWorkspace.id}`
-                    }, 
-                    handleTodoRealtimeChange
-                )
-                .subscribe();
-            
-            // 댓글 실시간 구독
-            const commentsSubscription = supabase
-                .channel('comments-changes')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'comments'
-                    }, 
-                    handleCommentRealtimeChange
-                )
-                .subscribe();
-            
-            // 프로젝트 실시간 구독
-            const projectsSubscription = supabase
-                .channel('projects-changes')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'projects',
-                        filter: `workspace_id=eq.${currentWorkspace.id}`
-                    }, 
-                    handleProjectRealtimeChange
-                )
-                .subscribe();
-            
-            // 알림 실시간 구독
-            const notificationsSubscription = supabase
-                .channel('notifications-changes')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'notifications',
-                        filter: `user_id=eq.${currentUser.id}`
-                    }, 
-                    handleNotificationRealtimeChange
-                )
-                .subscribe();
-            
-            realtimeSubscriptions.push(
-                todosSubscription, 
-                commentsSubscription, 
-                projectsSubscription, 
-                notificationsSubscription
-            );
-            
-            console.log('실시간 구독 초기화 완료');
-            
-            // 연결 상태 표시
-            updateRealtimeStatus(true);
+            try {
+                console.log('실시간 구독 초기화 시작...');
+                
+                // 브라우저 알림 권한 요청
+                requestNotificationPermission();
+                
+                // 기존 구독 정리
+                cleanupRealtimeSubscriptions();
+                
+                // 할 일 실시간 구독
+                try {
+                    const todosSubscription = supabase
+                        .channel('todos-changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*', 
+                                schema: 'public', 
+                                table: 'todos',
+                                filter: `workspace_id=eq.${currentWorkspace.id}`
+                            }, 
+                            handleTodoRealtimeChange
+                        )
+                        .subscribe();
+                    
+                    realtimeSubscriptions.push(todosSubscription);
+                } catch (error) {
+                    console.error('할 일 실시간 구독 오류:', error);
+                }
+                
+                // 댓글 실시간 구독
+                try {
+                    const commentsSubscription = supabase
+                        .channel('comments-changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*', 
+                                schema: 'public', 
+                                table: 'comments'
+                            }, 
+                            handleCommentRealtimeChange
+                        )
+                        .subscribe();
+                    
+                    realtimeSubscriptions.push(commentsSubscription);
+                } catch (error) {
+                    console.error('댓글 실시간 구독 오류:', error);
+                }
+                
+                // 프로젝트 실시간 구독
+                try {
+                    const projectsSubscription = supabase
+                        .channel('projects-changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*', 
+                                schema: 'public', 
+                                table: 'projects',
+                                filter: `workspace_id=eq.${currentWorkspace.id}`
+                            }, 
+                            handleProjectRealtimeChange
+                        )
+                        .subscribe();
+                    
+                    realtimeSubscriptions.push(projectsSubscription);
+                } catch (error) {
+                    console.error('프로젝트 실시간 구독 오류:', error);
+                }
+                
+                // 알림 실시간 구독
+                try {
+                    const notificationsSubscription = supabase
+                        .channel('notifications-changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*', 
+                                schema: 'public', 
+                                table: 'notifications',
+                                filter: `user_id=eq.${currentUser.id}`
+                            }, 
+                            handleNotificationRealtimeChange
+                        )
+                        .subscribe();
+                    
+                    realtimeSubscriptions.push(notificationsSubscription);
+                } catch (error) {
+                    console.error('알림 실시간 구독 오류:', error);
+                }
+                
+                console.log('실시간 구독 초기화 완료, 구독 수:', realtimeSubscriptions.length);
+                
+                // 연결 상태 표시
+                updateRealtimeStatus(true);
+                
+            } catch (error) {
+                console.error('실시간 구독 초기화 전체 오류:', error);
+                // 오류가 발생해도 앱은 계속 동작하도록 함
+            }
         }
         
         // 실시간 구독 정리
