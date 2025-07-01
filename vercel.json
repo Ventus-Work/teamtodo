@@ -13,6 +13,7 @@
       "dest": "/index.html"
     }
   ],
+  "functions": {},
   "env": {},
   "build": {
     "env": {
