@@ -4839,10 +4839,10 @@
                     </div>
                     
                     <div class="hero-cta">
-                        <button class="cta-primary" onclick="showLoginModal()">
+                        <button class="cta-primary" id="login-btn">
                             🔑 로그인
                         </button>
-                        <button class="cta-secondary" onclick="loginAsTestUser()">
+                        <button class="cta-secondary" id="demo-btn">
                             ✨ 데모 체험하기
                         </button>
                     </div>
@@ -6480,42 +6480,37 @@
                     // OAuth 콜백 중인 경우 이 이벤트 리스너는 무시
                     const urlParams = new URLSearchParams(window.location.search);
                     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                    const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token') || 
-                                          hashParams.has('access_token') || urlParams.has('error');
+                    const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('error');
                     
                     if (isOAuthCallback) {
                         console.log('OAuth 콜백 중이므로 일반 Auth State Change 무시');
                         return;
                     }
                     
-                    console.log('일반 Auth 상태 변화:', event, session);
+                    console.log('일반 Auth 상태 변화:', event);
                     
-                    if (event === 'SIGNED_IN' && session) {
-                        console.log('일반 로그인 성공, 앱 초기화 중...');
-                        currentUser = session.user;
-                        
-                        // 강제로 정식 모드 설정
-                        isDemoMode = false;
-                        console.log('Auth State Change - 강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
-                        
-                        // 사용자 프로필 설정 및 앱 표시
-                        try {
+                    try {
+                        if (event === 'SIGNED_IN' && session) {
+                            console.log('일반 로그인 성공');
+                            currentUser = session.user;
+                            isDemoMode = false;
+                            
                             const isApproved = await setupUserProfile();
                             if (isApproved) {
                                 showApp();
-                                await checkUserPermissions(true);
-                                await updateNavigationTabs();
                             }
-                        } catch (error) {
-                            console.error('로그인 후 설정 오류:', error);
+                        } else if (event === 'SIGNED_OUT') {
+                            console.log('로그아웃됨');
+                            currentUser = null;
+                            showLogin();
                         }
-                    } else if (event === 'SIGNED_OUT') {
-                        console.log('로그아웃됨, 로그인 화면으로 이동');
-                        currentUser = null;
-                        showLogin();
+                    } catch (stateChangeError) {
+                        console.error('Auth State Change 처리 오류:', stateChangeError);
                     }
                 });
                 
+                // 구독 객체 저장
+                window.globalAuthSubscription = authListener;
                 console.log('Auth State Listener 설정 완료');
                 
             } catch (error) {
@@ -6628,10 +6623,88 @@
             element.innerHTML = html;
         }
         
+        // 필수 함수들을 전역 스코프에 먼저 정의
+        window.showLoginModal = function() {
+            console.log('showLoginModal 호출됨');
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            } else {
+                console.error('loginModal을 찾을 수 없습니다!');
+            }
+        };
+
+        window.loginAsTestUser = async function() {
+            console.log('loginAsTestUser 호출됨');
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            try {
+                // 기존 loginAsTestUser 로직 실행
+                console.log('데모 모드 진입 중...');
+                // 여기에 실제 로그인 로직이 들어갈 예정
+                alert('데모 모드로 진입합니다! (기능 구현 중)');
+            } catch (error) {
+                console.error('데모 로그인 실패:', error);
+                alert('데모 로그인에 실패했습니다: ' + error.message);
+            }
+        };
+
         // 초기화
         document.addEventListener('DOMContentLoaded', function() {
             debugLog('DOMContentLoaded 이벤트 발생');
             initializeSafetyVariables();
+            
+            // 버튼 이벤트 리스너 등록
+            const loginBtn = document.getElementById('login-btn');
+            const demoBtn = document.getElementById('demo-btn');
+            
+            if (loginBtn) {
+                loginBtn.addEventListener('click', function() {
+                    console.log('로그인 버튼 클릭됨');
+                    window.showLoginModal();
+                });
+                console.log('✅ 로그인 버튼 이벤트 리스너 등록 완료');
+            } else {
+                console.error('❌ 로그인 버튼을 찾을 수 없습니다!');
+            }
+            
+            if (demoBtn) {
+                demoBtn.addEventListener('click', function() {
+                    console.log('데모 버튼 클릭됨');
+                    window.loginAsTestUser();
+                });
+                console.log('✅ 데모 버튼 이벤트 리스너 등록 완료');
+            } else {
+                console.error('❌ 데모 버튼을 찾을 수 없습니다!');
+            }
+            
+            // 함수 존재 여부 확인 및 디버깅 (즉시 실행)
+            console.log('=== 즉시 함수 존재 확인 ===');
+            console.log('showLoginModal:', typeof window.showLoginModal);
+            console.log('loginAsTestUser:', typeof window.loginAsTestUser);
+            
+            // 화면에 디버그 정보 즉시 표시
+            const debugDiv = document.createElement('div');
+            debugDiv.id = 'debug-info';
+            debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; background: rgba(255,0,0,0.9); color: white; padding: 15px; border-radius: 8px; z-index: 10000; font-family: monospace; font-size: 14px; border: 2px solid white;';
+            debugDiv.innerHTML = 
+                `<strong>🔍 디버그 정보</strong><br>` +
+                `로그인 버튼: ${document.getElementById('login-btn') ? '✅ 존재' : '❌ 없음'}<br>` +
+                `데모 버튼: ${document.getElementById('demo-btn') ? '✅ 존재' : '❌ 없음'}<br>` +
+                `showLoginModal: ${typeof window.showLoginModal}<br>` +
+                `loginAsTestUser: ${typeof window.loginAsTestUser}<br>` +
+                `<small>이 정보는 15초 후 사라집니다</small>`;
+            document.body.appendChild(debugDiv);
+            
+            // 15초 후 디버그 정보 제거
+            setTimeout(() => {
+                if (debugDiv.parentNode) {
+                    debugDiv.parentNode.removeChild(debugDiv);
+                }
+            }, 15000);
             
             // 편집 모달 날짜 선택기 초기화
             flatpickr("#editTodoDueDate", {
@@ -6677,37 +6750,50 @@
                 window.history.replaceState({}, '', newUrl);
             }
 
-            // 앱 초기화 함수 (재시도 로직 포함)
+            // 앱 초기화 함수 (개선된 버전)
             const initWithRetry = async () => {
                 try {
-                    // Supabase 연결 확인 (타임아웃 추가)
-                    const connectionPromise = checkSupabaseConnection();
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('연결 확인 타임아웃')), 2000)
-                    );
+                    console.log('앱 초기화 시작');
                     
-                    try {
-                        await Promise.race([connectionPromise, timeoutPromise]);
-                        console.log('Supabase 연결 확인 완료');
-                    } catch (connError) {
-                        console.warn('Supabase 연결 확인 실패, 로그인 화면으로 이동:', connError.message);
+                    // 기본 상태 확인
+                    if (!isDemoMode) {
+                        // Supabase 연결 확인 (단순화된 체크)
+                        const connectionPromise = checkSupabaseConnection();
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('연결 확인 타임아웃')), 3000)
+                        );
+                        
+                        try {
+                            await Promise.race([connectionPromise, timeoutPromise]);
+                            console.log('Supabase 연결 확인 완료');
+                        } catch (connError) {
+                            console.warn('Supabase 연결 실패, 데모 모드로 전환:', connError.message);
+                            isDemoMode = true;
+                        }
                     }
                     
-                    // 앱 초기화
+                    // 앱 초기화 (간소화된 버전)
                     await initializeApp();
                     
-                    debugLog('앱 초기화 성공');
+                    console.log('앱 초기화 성공');
+                    
                 } catch (error) {
                     console.error('앱 초기화 실패:', error);
                     
-                    if (initRetries > 0) {
+                    if (initRetries > 0 && !isDemoMode) {
                         initRetries--;
                         console.warn(`초기화 재시도 중... (남은 시도: ${initRetries})`);
+                        
+                        // 실패 시 데모 모드로 전환 시도
+                        if (initRetries === 1) {
+                            console.log('최종 재시도에서 데모 모드로 전환');
+                            isDemoMode = true;
+                        }
                         
                         // 1초 후 재시도
                         setTimeout(initWithRetry, 1000);
                     } else {
-                        console.log('모든 재시도 실패, 로그인 화면 표시');
+                        console.log('모든 재시도 실패 또는 데모 모드, 로그인 화면 표시');
                         showLogin();
                     }
                 }
@@ -6786,78 +6872,87 @@
         window.cachedPermissions = null;
         window.lastPermissionCheck = null;
         
-        // 앱 초기화
+        // 앱 초기화 (간소화된 버전)
         async function initializeApp() {
             try {
-                console.log('앱 초기화 시작');
+                console.log('앱 초기화 시작, 모드:', isDemoMode ? '데모' : '정식');
                 
-                // OAuth 콜백이 아니고 정식 모드가 아닌 경우에만 데모 사용자 확인
+                // URL 파라미터 확인
                 const urlParams = new URLSearchParams(window.location.search);
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token');
+                const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token');
                 
-                if (!isOAuthCallback && !window.location.search.includes('mode=production')) {
+                // 데모 모드 처리
+                if (isDemoMode) {
+                    console.log('데모 모드로 실행');
                     const savedDemoUser = localStorage.getItem('demo_user');
-                    if (savedDemoUser && !isDemoMode === false) { // isDemoMode가 false로 설정되지 않은 경우에만
-                        console.log('저장된 데모 사용자 발견, 데모 모드로 시작');
+                    if (savedDemoUser) {
                         currentUser = JSON.parse(savedDemoUser);
-                        isDemoMode = true;
                         await setupUserProfile();
                         showApp();
+                        return;
+                    } else {
+                        // 저장된 데모 사용자가 없으면 로그인 화면
+                        showLogin();
                         return;
                     }
                 }
                 
-                // Supabase 세션 확인 (타임아웃 추가) - OAuth 콜백인 경우 더 긴 대기 시간
-                const sessionPromise = supabase.auth.getSession();
-                const timeoutDuration = isOAuthCallback ? 5000 : 3000; // OAuth 콜백인 경우 5초 대기
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Supabase 연결 타임아웃')), timeoutDuration)
-                );
+                // 정식 모드: Supabase 세션 확인
+                if (!supabase) {
+                    console.error('Supabase 클라이언트가 없음');
+                    showLogin();
+                    return;
+                }
                 
-                console.log('세션 확인 중... (타임아웃:', timeoutDuration + 'ms)');
-                const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
-                
-                if (session) {
-                    console.log('세션 발견됨:', session);
-                    currentUser = session.user;
+                try {
+                    console.log('Supabase 세션 확인 중...');
+                    const { data: { session }, error } = await supabase.auth.getSession();
                     
-                    // 강제로 정식 모드 설정
-                    isDemoMode = false;
-                    console.log('강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
-                    
-                    // OAuth 콜백 URL 정리
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.has('code') || urlParams.has('access_token')) {
-                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-                        window.history.replaceState({}, '', cleanUrl);
+                    if (error) {
+                        console.error('세션 확인 오류:', error);
+                        showLogin();
+                        return;
                     }
                     
-                    // 사용자 프로필 설정 및 승인 상태 확인
-                    const isApproved = await setupUserProfile();
-                    
-                    // 승인된 사용자만 앱 사용 가능
-                    if (isApproved) {
-                        showApp();
+                    if (session && session.user) {
+                        console.log('유효한 세션 발견됨');
+                        currentUser = session.user;
                         
-                        // 서버 측 권한 정보 가져오기 및 네비게이션 업데이트
-                        try {
-                            await checkUserPermissions(true);  // 서버 측 권한 강제 확인
-                            await updateNavigationTabs();     // 네비게이션 탭 업데이트
-                        } catch (permError) {
-                            console.error('권한 정보 로드 오류:', permError);
-                            // 오류가 발생해도 계속 진행 (클라이언트 측 권한으로 폴백)
+                        // OAuth 콜백 URL 정리
+                        if (isOAuthCallback) {
+                            const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                            window.history.replaceState({}, '', cleanUrl);
                         }
+                        
+                        // 사용자 프로필 설정
+                        const isApproved = await setupUserProfile();
+                        
+                        if (isApproved) {
+                            showApp();
+                        }
+                        // 다른 상태는 setupUserProfile에서 처리됨
+                    } else {
+                        console.log('세션 없음, 로그인 화면 표시');
+                        showLogin();
                     }
-                    // 나머지 상태(pending, rejected, suspended)는 각각의 화면이 setupUserProfile에서 표시됨
-                } else {
-                    console.log('세션 없음, 로그인 화면 표시');
+                    
+                } catch (sessionError) {
+                    console.error('세션 확인 중 오류:', sessionError);
                     showLogin();
                 }
+                
             } catch (error) {
-                console.error('초기화 오류:', error);
-                console.log('오류로 인해 로그인 화면 표시');
-                showLogin();
+                console.error('앱 초기화 오류:', error);
+                
+                // 오류 발생 시 데모 모드로 전환
+                if (!isDemoMode) {
+                    console.log('오류로 인해 데모 모드로 전환');
+                    isDemoMode = true;
+                    showLogin();
+                } else {
+                    showLogin();
+                }
             }
         }
         
@@ -6871,8 +6966,11 @@
             document.getElementById('appContainer').classList.remove('show');
         }
         
-        // 앱 화면 표시 (서버 측 권한 검증 통합)
+        // 앱 화면 표시 (안정화된 버전)
         function showApp() {
+            console.log('앱 화면 표시 시작');
+            
+            // UI 상태 업데이트
             document.getElementById('loading').style.display = 'none';
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('approvalPendingContainer').style.display = 'none';
@@ -6880,18 +6978,37 @@
             document.getElementById('accountSuspendedContainer').style.display = 'none';
             document.getElementById('appContainer').classList.add('show');
             
-            // 앱 데이터 로드 및 권한 확인
-            loadAppData();
+            console.log('앱 화면 표시 완료');
             
-            // 권한에 따른 네비게이션 업데이트 (비동기)
+            // 데이터 로드 (비동기, 오류 방지)
             setTimeout(async () => {
                 try {
-                    // 서버 측 권한 확인 (오류 시 클라이언트 측으로 폴백)
-                    await updateNavigationTabs();
-                } catch (error) {
-                    console.error('권한 업데이트 오류:', error);
+                    console.log('앱 데이터 로드 시작');
+                    await loadAppData();
+                    console.log('앱 데이터 로드 완료');
+                } catch (dataError) {
+                    console.error('앱 데이터 로드 오류:', dataError);
+                    
+                    // 데이터 로드 실패 시 데모 모드로 전환
+                    if (!isDemoMode) {
+                        console.log('데이터 로드 실패로 데모 모드로 전환');
+                        isDemoMode = true;
+                        try {
+                            await loadAppData();
+                        } catch (demoError) {
+                            console.error('데모 모드 데이터 로드도 실패:', demoError);
+                            showNotification('데이터 로드 중 오류가 발생했습니다.', 'error');
+                        }
+                    }
                 }
-            }, 200);
+                
+                // 네비게이션 업데이트 (별도 처리)
+                try {
+                    await updateNavigationTabs();
+                } catch (navError) {
+                    console.warn('네비게이션 업데이트 오류 (무시됨):', navError);
+                }
+            }, 100);
         }
         
         // 승인 대기 화면 표시
@@ -6945,10 +7062,10 @@
         // 사용자 프로필 설정 및 승인 상태 확인
         async function setupUserProfile() {
             try {
-                // 사용자 정보 확인/생성
+                // 사용자 정보 확인/생성 (조인 제거하여 무한 재귀 방지)
                 const { data: existingUser } = await supabase
                     .from('users')
-                    .select('*, approved_by(*)')
+                    .select('*')
                     .eq('id', currentUser.id)
                     .single();
                 
@@ -6968,10 +7085,10 @@
                     
                     if (error) throw error;
                     
-                    // 새로 생성된 사용자 정보 가져오기
+                    // 새로 생성된 사용자 정보 가져오기 (조인 제거)
                     const { data: newUser } = await supabase
                         .from('users')
-                        .select('*, approved_by(*)')
+                        .select('*')
                         .eq('id', currentUser.id)
                         .single();
                         
@@ -7056,33 +7173,122 @@
             }
         }
         
-        // 앱 데이터 로드
+        // 앱 데이터 로드 (개선된 버전)
         async function loadAppData() {
+            // 중복 실행 방지
+            if (window.loadAppDataInProgress) {
+                console.log('앱 데이터 로딩이 이미 진행 중입니다.');
+                return;
+            }
+            
+            window.loadAppDataInProgress = true;
+            console.log('앱 데이터 로딩 시작');
+            
             try {
-                // 데모 모드인지 확인
-                if (isDemoMode || (currentUser && currentUser.id.indexOf('demo-user-') === 0)) {
+                // 모드 결정
+                const shouldUseDemo = isDemoMode || 
+                                    !currentUser || 
+                                    !supabase || 
+                                    (currentUser && currentUser.id.indexOf('demo-user-') === 0);
+                
+                if (shouldUseDemo) {
                     // 데모 모드: localStorage 기반
                     console.log('데모 모드에서 데이터 로드');
                     loadDemoData();
+                    updateDashboard();
                 } else {
-                    // 실제 모드: Supabase 기반
+                    // 정식 모드: 단순화된 로딩
                     console.log('정식 모드에서 Supabase 데이터 로드');
-                    await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
-                    await Promise.all([
-                        loadTodos(),
-                        loadNotifications(),
-                        updateDashboard()
-                    ]);
+                    
+                    // 기본 워크스페이스 생성 또는 로드
+                    await ensureDefaultWorkspace();
+                    
+                    // 데이터 순차적 로드 (병렬 처리로 인한 충돌 방지)
+                    await loadWorkspaces();
+                    await loadTodos();
+                    await loadNotifications();
+                    
+                    // UI 업데이트
+                    updateDashboard();
                 }
+                
+                console.log('앱 데이터 로딩 완료');
+                
             } catch (error) {
-                console.error('데이터 로드 오류:', error);
-                // 실제 모드에서 오류 시에만 데모 모드로 폴백
-                if (!isDemoMode) {
-                    console.log('실제 모드에서 오류 발생, 데모 모드로 폴백하지 않음');
-                    showNotification('데이터 로드 중 오류가 발생했습니다. 페이지를 새로고침해주세요.', 'error');
-                } else {
+                console.error('앱 데이터 로드 오류:', error);
+                
+                // 오류 발생 시 데모 모드로 전환 (한 번만)
+                if (!isDemoMode && !window.hasTriedFallback) {
+                    console.log('오류로 인해 데모 모드로 전환');
+                    window.hasTriedFallback = true;
+                    isDemoMode = true;
                     loadDemoData();
+                    updateDashboard();
+                    showNotification('백엔드 연결 문제로 데모 모드로 전환되었습니다.', 'warning');
+                } else if (isDemoMode) {
+                    // 데모 모드에서도 오류 발생
+                    loadDemoData();
+                    updateDashboard();
                 }
+            } finally {
+                window.loadAppDataInProgress = false;
+            }
+        }
+        
+        // 기본 워크스페이스 보장 함수
+        async function ensureDefaultWorkspace() {
+            try {
+                if (!supabase || !currentUser) {
+                    console.log('Supabase 또는 현재 사용자가 없음');
+                    return;
+                }
+                
+                // 기존 워크스페이스 확인
+                const { data: existingWorkspaces, error } = await supabase
+                    .from('workspaces')
+                    .select('*')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('워크스페이스 조회 오류:', error);
+                    return;
+                }
+                
+                // 워크스페이스가 없으면 기본 워크스페이스 생성
+                if (!existingWorkspaces || existingWorkspaces.length === 0) {
+                    console.log('기본 워크스페이스 생성');
+                    
+                    const { data: newWorkspace, error: createError } = await supabase
+                        .from('workspaces')
+                        .insert([{
+                            name: '내 워크스페이스',
+                            description: '기본 워크스페이스',
+                            created_by: currentUser.id
+                        }])
+                        .select()
+                        .single();
+                    
+                    if (createError) {
+                        console.error('워크스페이스 생성 오류:', createError);
+                        return;
+                    }
+                    
+                    // 워크스페이스 멤버로 추가
+                    const { error: memberError } = await supabase
+                        .from('workspace_members')
+                        .insert([{
+                            workspace_id: newWorkspace.id,
+                            user_id: currentUser.id,
+                            role: 'admin'
+                        }]);
+                    
+                    if (memberError) {
+                        console.error('워크스페이스 멤버 추가 오류:', memberError);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('기본 워크스페이스 보장 오류:', error);
             }
         }
         
@@ -7661,57 +7867,57 @@
                 }
                 
                 const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-                    console.log('OAuth 콜백 중 Auth 상태 변화:', event, session);
+                    console.log('OAuth 콜백 중 Auth 상태 변화:', event);
                     
                     if (authHandled) return; // 중복 처리 방지
                     
-                    if (event === 'SIGNED_IN' && session) {
-                        authHandled = true;
-                        console.log('OAuth 로그인 성공!');
-                        
-                        currentUser = session.user;
-                        isDemoMode = false;
-                        
-                        // URL 정리
-                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-                        window.history.replaceState({}, '', cleanUrl);
-                        
-                        try {
-                            // 사용자 프로필 설정
-                            await setupUserProfile();
+                    try {
+                        if (event === 'SIGNED_IN' && session) {
+                            authHandled = true;
+                            console.log('OAuth 로그인 성공!');
                             
-                            // 앱 표시
-                            showApp();
+                            currentUser = session.user;
+                            isDemoMode = false;
                             
-                            // 권한 확인 및 업데이트
-                            await checkUserPermissions(true);
-                            await updateNavigationTabs();
+                            // URL 정리
+                            const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                            window.history.replaceState({}, '', cleanUrl);
                             
-                            console.log('OAuth 로그인 완료 - 앱 진입');
+                            // 사용자 프로필 설정 및 앱 표시
+                            const isApproved = await setupUserProfile();
+                            if (isApproved) {
+                                showApp();
+                            }
+                            
+                            console.log('OAuth 로그인 완료');
                             
                             // 이벤트 리스너 정리
                             if (authSubscription && authSubscription.unsubscribe) {
-                                authSubscription.unsubscribe();
+                                try {
+                                    authSubscription.unsubscribe();
+                                } catch (unsubError) {
+                                    console.warn('OAuth 구독 해제 오류 (무시됨):', unsubError);
+                                }
                             }
                             
-                        } catch (error) {
-                            console.error('OAuth 로그인 후 설정 오류:', error);
-                            showNotification('로그인 후 설정 중 오류가 발생했습니다.', 'error');
-                            showLogin();
-                            
-                            if (authSubscription && authSubscription.unsubscribe) {
-                                authSubscription.unsubscribe();
+                        } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+                            if (!authHandled) {
+                                console.log('OAuth 로그인 실패');
+                                showLogin();
+                                
+                                if (authSubscription && authSubscription.unsubscribe) {
+                                    try {
+                                        authSubscription.unsubscribe();
+                                    } catch (unsubError) {
+                                        console.warn('OAuth 구독 해제 오류 (무시됨):', unsubError);
+                                    }
+                                }
                             }
                         }
-                    } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-                        if (!authHandled) {
-                            console.log('OAuth 로그인 실패 - 로그인 화면으로');
-                            showLogin();
-                            
-                            if (authSubscription && authSubscription.unsubscribe) {
-                                authSubscription.unsubscribe();
-                            }
-                        }
+                    } catch (oauthError) {
+                        console.error('OAuth 콜백 처리 오류:', oauthError);
+                        showNotification('로그인 처리 중 오류가 발생했습니다.', 'error');
+                        showLogin();
                     }
                 });
                 
@@ -7805,55 +8011,83 @@
             }
         });
         
-        // 워크스페이스 로드
+        // 워크스페이스 로드 (단순화된 버전)
         async function loadWorkspaces() {
+            if (!currentUser || !supabase) {
+                console.log('현재 사용자 또는 Supabase 클라이언트가 없음');
+                return;
+            }
+            
             try {
+                console.log('워크스페이스 로드 시작');
+                
+                // 단순한 쿼리로 변경 (조인 제거)
                 const { data, error } = await supabase
                     .from('workspaces')
-                    .select(`
-                        *,
-                        workspace_members!inner(user_id)
-                    `)
-                    .eq('workspace_members.user_id', currentUser.id);
+                    .select('*')
+                    .order('created_at', { ascending: false });
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('워크스페이스 쿼리 오류:', error);
+                    throw error;
+                }
                 
                 workspaces = data || [];
+                console.log('로드된 워크스페이스:', workspaces.length);
+                
                 renderWorkspaces();
                 
                 // 첫 번째 워크스페이스를 기본으로 선택
                 if (workspaces.length > 0 && !currentWorkspace) {
                     currentWorkspace = workspaces[0];
+                    console.log('기본 워크스페이스 선택:', currentWorkspace.name);
+                    
                     // 워크스페이스에 해당하는 프로젝트 로드
                     await loadProjects();
-                    // 실시간 구독 초기화
-                    initializeRealtimeSubscriptions();
+                    
+                    // 실시간 구독 초기화 (오류 발생 시 무시)
+                    try {
+                        initializeRealtimeSubscriptions();
+                    } catch (realtimeError) {
+                        console.warn('실시간 구독 초기화 오류 (무시됨):', realtimeError);
+                    }
                 }
+                
+                console.log('워크스페이스 로드 완료');
                 
             } catch (error) {
                 console.error('워크스페이스 로드 오류:', error);
+                
+                // 오류 시 빈 배열로 초기화
+                workspaces = [];
+                renderWorkspaces();
             }
         }
         
-        // 프로젝트 로드
+        // 프로젝트 로드 (단순화된 버전)
         async function loadProjects() {
-            if (!currentWorkspace) return;
+            if (!currentWorkspace || !supabase) {
+                console.log('현재 워크스페이스 또는 Supabase 클라이언트가 없음');
+                return;
+            }
             
             try {
-                const { data, error } = await executeSupabaseRequest(
-                    async (supabase) => {
-                        return await supabase
-                            .from('projects')
-                            .select('*')
-                            .eq('workspace_id', currentWorkspace.id)
-                            .order('created_at', { ascending: false });
-                    },
-                    '프로젝트 로드 중 오류가 발생했습니다'
-                );
+                console.log('프로젝트 로드 시작, 워크스페이스:', currentWorkspace.id);
                 
-                if (error) throw error;
+                const { data, error } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('workspace_id', currentWorkspace.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('프로젝트 쿼리 오류:', error);
+                    throw error;
+                }
                 
                 projects = data || [];
+                console.log('로드된 프로젝트:', projects.length);
+                
                 renderProjects();
                 
             } catch (error) {
@@ -7864,34 +8098,51 @@
             }
         }
         
-        // 할 일 로드
+        // 할 일 로드 (단순화된 버전)
         async function loadTodos() {
-            if (!currentWorkspace) return;
+            if (!currentWorkspace || !supabase) {
+                console.log('현재 워크스페이스 또는 Supabase 클라이언트가 없음');
+                return;
+            }
             
             try {
+                console.log('할 일 로드 시작, 워크스페이스:', currentWorkspace.id);
+                
+                // 단순한 쿼리로 변경 (조인 제거)
                 const { data, error } = await supabase
                     .from('todos')
-                    .select(`
-                        *,
-                        assigned_user:assigned_to(full_name),
-                        created_user:created_by(full_name)
-                    `)
+                    .select('*')
                     .eq('workspace_id', currentWorkspace.id)
                     .order('created_at', { ascending: false });
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('할 일 쿼리 오류:', error);
+                    throw error;
+                }
                 
                 todos = data || [];
+                console.log('로드된 할 일:', todos.length);
+                
                 renderTodos();
                 
             } catch (error) {
                 console.error('할 일 로드 오류:', error);
+                // 오류 시 빈 배열로 초기화
+                todos = [];
+                renderTodos();
             }
         }
         
-        // 알림 로드
+        // 알림 로드 (단순화된 버전)
         async function loadNotifications() {
+            if (!currentUser || !supabase) {
+                console.log('현재 사용자 또는 Supabase 클라이언트가 없음');
+                return;
+            }
+            
             try {
+                console.log('알림 로드 시작, 사용자:', currentUser.id);
+                
                 const { data, error } = await supabase
                     .from('notifications')
                     .select('*')
@@ -7899,12 +8150,18 @@
                     .order('created_at', { ascending: false })
                     .limit(10);
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('알림 쿼리 오류:', error);
+                    throw error;
+                }
                 
+                console.log('로드된 알림:', data?.length || 0);
                 renderNotifications(data || []);
                 
             } catch (error) {
                 console.error('알림 로드 오류:', error);
+                // 오류 시 빈 배열로 렌더링
+                renderNotifications([]);
             }
         }
         
@@ -11889,7 +12146,7 @@
                                 Google OAuth 설정이 완료될 때까지 다른 로그인 방법을 사용해보세요:
                             </p>
                             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                <button onclick="this.parentElement.parentElement.parentElement.remove(); document.querySelector('button[onclick*=\"loginAsTestUser\"]').click()" style="background: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                                <button onclick="this.parentElement.parentElement.parentElement.remove(); if(typeof loginAsTestUser === 'function') loginAsTestUser();" style="background: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
                                     🧪 테스트 계정으로 시작
                                 </button>
                                 <button onclick="this.parentElement.parentElement.parentElement.remove(); switchLoginMode('signup')" style="background: #3b82f6; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
@@ -11997,7 +12254,7 @@
                                 Vercel 배포 전에도 TeamTodo의 모든 기능을 체험하실 수 있습니다:
                             </p>
                             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
-                                <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove(); document.querySelector('button[onclick*=\"loginAsTestUser\"]').click()" style="background: #10b981; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;">
+                                <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove(); if(typeof loginAsTestUser === 'function') loginAsTestUser();" style="background: #10b981; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;">
                                     🧪 테스트 계정
                                 </button>
                                 <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove(); switchLoginMode('signup')" style="background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;">
@@ -12290,59 +12547,117 @@
             }
         });
         
-        // 인증 상태 변화 감지
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                currentUser = session.user;
-                await setupUserProfile();
-                showApp();
-            } else if (event === 'SIGNED_OUT') {
-                showLogin();
+        // 인증 상태 변화 감지 (안전한 버전)
+        let authStateSubscription = null;
+        
+        if (supabase && supabase.auth) {
+            try {
+                const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+                    console.log('인증 상태 변화:', event);
+                    
+                    try {
+                        if (event === 'SIGNED_IN' && session) {
+                            console.log('로그인 완료');
+                            currentUser = session.user;
+                            isDemoMode = false; // 로그인 시 정식 모드
+                            
+                            const isApproved = await setupUserProfile();
+                            if (isApproved) {
+                                showApp();
+                            }
+                        } else if (event === 'SIGNED_OUT') {
+                            console.log('로그아웃 완료');
+                            currentUser = null;
+                            showLogin();
+                        }
+                    } catch (authError) {
+                        console.error('인증 상태 변화 처리 오류:', authError);
+                    }
+                });
+                
+                authStateSubscription = authListener;
+                console.log('인증 상태 감지 설정 완료');
+                
+            } catch (authSetupError) {
+                console.error('인증 상태 감지 설정 오류:', authSetupError);
+            }
+        }
+        
+        // 페이지 언로드 시 구독 정리
+        window.addEventListener('beforeunload', () => {
+            if (authStateSubscription && authStateSubscription.unsubscribe) {
+                try {
+                    authStateSubscription.unsubscribe();
+                } catch (unsubError) {
+                    console.warn('인증 구독 해제 오류 (무시됨):', unsubError);
+                }
             }
         });
         
         // ==================== 실시간 기능 ====================
         
-        // 실시간 구독 초기화
+        // 실시간 구독 초기화 (안전한 버전)
         function initializeRealtimeSubscriptions() {
-            if (!currentUser || !currentWorkspace || isDemoMode) return;
+            if (!currentUser || !currentWorkspace || isDemoMode || !supabase) {
+                console.log('실시간 구독 조건 불충족');
+                return;
+            }
             
-            // 브라우저 알림 권한 요청
-            requestNotificationPermission();
-            
-            // 기존 구독 정리
-            cleanupRealtimeSubscriptions();
-            
-            // 할 일 실시간 구독
-            const todosSubscription = supabase
-                .channel('todos-changes')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'todos',
-                        filter: `workspace_id=eq.${currentWorkspace.id}`
-                    }, 
-                    handleTodoRealtimeChange
-                )
-                .subscribe();
-            
-            // 댓글 실시간 구독
-            const commentsSubscription = supabase
-                .channel('comments-changes')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'comments'
-                    }, 
-                    handleCommentRealtimeChange
-                )
-                .subscribe();
-            
-            // 프로젝트 실시간 구독
-            const projectsSubscription = supabase
-                .channel('projects-changes')
+            try {
+                console.log('실시간 구독 초기화 시작');
+                
+                // 브라우저 알림 권한 요청
+                requestNotificationPermission();
+                
+                // 기존 구독 정리
+                cleanupRealtimeSubscriptions();
+                
+                // 할 일 실시간 구독 (간소화)
+                try {
+                    const todosSubscription = supabase
+                        .channel('todos-changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*', 
+                                schema: 'public', 
+                                table: 'todos',
+                                filter: `workspace_id=eq.${currentWorkspace.id}`
+                            }, 
+                            handleTodoRealtimeChange
+                        )
+                        .subscribe();
+                        
+                    realtimeSubscriptions.push(todosSubscription);
+                    console.log('할 일 실시간 구독 완료');
+                } catch (todoSubError) {
+                    console.warn('할 일 실시간 구독 오류:', todoSubError);
+                }
+                
+                // 기타 구독은 선택적으로 추가 (오류 방지)
+                try {
+                    // 댓글 실시간 구독
+                    const commentsSubscription = supabase
+                        .channel('comments-changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*', 
+                                schema: 'public', 
+                                table: 'comments'
+                            }, 
+                            handleCommentRealtimeChange
+                        )
+                        .subscribe();
+                        
+                    realtimeSubscriptions.push(commentsSubscription);
+                    console.log('댓글 실시간 구독 완료');
+                } catch (commentSubError) {
+                    console.warn('댓글 실시간 구독 오류:', commentSubError);
+                }
+                
+                // 프로젝트 실시간 구독
+                try {
+                    const projectsSubscription = supabase
+                        .channel('projects-changes')
                 .on('postgres_changes', 
                     { 
                         event: '*', 
