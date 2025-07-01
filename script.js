@@ -84,14 +84,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const demoBtn = document.getElementById('demo-btn');
     
     if (loginBtn) {
-        console.log('로그인 버튼 찾음');
+        console.log('✅ 로그인 버튼 찾음 - onclick 이벤트 설정됨');
+        // 이벤트 리스너 방식으로도 추가 (백업)
+        loginBtn.addEventListener('click', handleLoginClick);
     } else {
-        console.log('로그인 버튼을 찾을 수 없음');
+        console.log('❌ 로그인 버튼을 찾을 수 없음');
     }
     
     if (demoBtn) {
-        console.log('데모 버튼 찾음');
+        console.log('✅ 데모 버튼 찾음 - onclick 이벤트 설정됨');
+        // 이벤트 리스너 방식으로도 추가 (백업)
+        demoBtn.addEventListener('click', handleDemoClick);
     } else {
-        console.log('데모 버튼을 찾을 수 없음');
+        console.log('❌ 데모 버튼을 찾을 수 없음');
     }
+    
+    console.log('🎉 초기화 완료!');
 });
