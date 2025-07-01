@@ -4839,10 +4839,10 @@
                     </div>
                     
                     <div class="hero-cta">
-                        <button class="cta-primary" id="login-btn">
+                        <button class="cta-primary" id="login-btn" onclick="handleLoginClick()">
                             🔑 로그인
                         </button>
-                        <button class="cta-secondary" id="demo-btn">
+                        <button class="cta-secondary" id="demo-btn" onclick="handleDemoClick()">
                             ✨ 데모 체험하기
                         </button>
                     </div>
@@ -6381,13 +6381,58 @@
     </div>
 
     <script>
-        // Supabase 설정 - 환경 변수 또는 기본값 사용
-        const SUPABASE_URL = typeof process !== 'undefined' && process.env.SUPABASE_URL 
-            ? process.env.SUPABASE_URL 
-            : 'https://nlywtmsbkvaggfvezonj.supabase.co';
-        const SUPABASE_ANON_KEY = typeof process !== 'undefined' && process.env.SUPABASE_ANON_KEY 
-            ? process.env.SUPABASE_ANON_KEY 
-            : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5seXd0bXNia3ZhZ2dmdmV6b25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTAzMDEsImV4cCI6MjA2NTk2NjMwMX0.FMyZENGZkUHJEp6YFe-VdYT-L3b49si1yu6EvWun01Y';
+        // ==================== 🚨 최우선: 버튼 클릭 함수들 정의 ====================
+        
+        // 로그인 버튼 클릭 핸들러 (즉시 정의)
+        function handleLoginClick() {
+            console.log('🔑 로그인 버튼이 클릭되었습니다!');
+            alert('로그인 기능이 호출되었습니다!');
+            
+            // 로그인 모달 표시 시도
+            try {
+                const modal = document.getElementById('loginModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    console.log('로그인 모달 표시됨');
+                } else {
+                    console.log('로그인 모달을 찾을 수 없습니다');
+                }
+            } catch (error) {
+                console.error('모달 표시 오류:', error);
+            }
+        }
+        
+        // 데모 버튼 클릭 핸들러 (즉시 정의)
+        function handleDemoClick() {
+            console.log('✨ 데모 버튼이 클릭되었습니다!');
+            alert('데모 모드로 진입합니다!');
+            
+            // 데모 모드 실행 시도
+            try {
+                console.log('데모 모드 시작...');
+                // 기본 데모 로직 실행
+            } catch (error) {
+                console.error('데모 모드 오류:', error);
+            }
+        }
+        
+        // 전역 window 객체에 명시적으로 할당 (브라우저 호환성)
+        window.handleLoginClick = handleLoginClick;
+        window.handleDemoClick = handleDemoClick;
+        
+        // 함수 정의 확인 로그
+        console.log('✅ 버튼 핸들러 함수들이 정의되었습니다');
+        console.log('handleLoginClick:', typeof handleLoginClick);
+        console.log('handleDemoClick:', typeof handleDemoClick);
+        console.log('window.handleLoginClick:', typeof window.handleLoginClick);
+        console.log('window.handleDemoClick:', typeof window.handleDemoClick);
+        
+        // ==================== Supabase 설정 (단순화) ====================
+        
+        const SUPABASE_URL = 'https://nlywtmsbkvaggfvezonj.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5seXd0bXNia3ZhZ2dmdmV6b25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzOTAzMDEsImV4cCI6MjA2NTk2NjMwMX0.FMyZENGZkUHJEp6YFe-VdYT-L3b49si1yu6EvWun01Y';
+        
+        // ==================== 기존 코드 연동 ====================
         
         // 연결 정보 확인
         console.log('Supabase URL:', SUPABASE_URL);
@@ -12694,6 +12739,11 @@
             
             // 연결 상태 표시
             updateRealtimeStatus(true);
+            
+            } catch (error) {
+                console.error('실시간 구독 초기화 오류:', error);
+                updateRealtimeStatus(false);
+            }
         }
         
         // 실시간 구독 정리
