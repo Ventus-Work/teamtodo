@@ -6396,63 +6396,139 @@
         // Supabase 연결 관리를 위한 함수
         function createSupabaseClient() {
             try {
-                return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                // Supabase 라이브러리 로드 확인
+                if (!window.supabase) {
+                    console.error('Supabase 라이브러리가 로드되지 않았습니다.');
+                    showNotification('Supabase 라이브러리 로딩 실패. 페이지를 새로고침해주세요.', 'error');
+                    return null;
+                }
+                
+                // URL과 키 유효성 검사
+                if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+                    console.error('Supabase 설정이 없습니다:', { url: !!SUPABASE_URL, key: !!SUPABASE_ANON_KEY });
+                    showNotification('Supabase 설정이 없습니다. 환경 변수를 확인해주세요.', 'error');
+                    return null;
+                }
+                
+                console.log('Supabase 클라이언트 생성 중...');
+                const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                     autoRefreshToken: true,
                     persistSession: true,
                     detectSessionInUrl: true
                 });
+                
+                console.log('Supabase 클라이언트 생성 성공');
+                return client;
+                
             } catch (error) {
                 console.error('Supabase 클라이언트 생성 오류:', error);
-                showNotification('데이터베이스 연결에 문제가 발생했습니다. 페이지를 새로고침해주세요.', 'error');
+                showNotification('데이터베이스 연결에 문제가 발생했습니다: ' + error.message, 'error');
                 return null;
             }
         }
         
         // 초기 Supabase 클라이언트 생성
-        let supabase = createSupabaseClient();
+        let supabase = null;
         
-        // Auth 상태 변화 감지 (OAuth 콜백이 아닌 경우에만)
-        if (supabase) {
-            supabase.auth.onAuthStateChange(async (event, session) => {
-                // OAuth 콜백 중인 경우 이 이벤트 리스너는 무시
-                const urlParams = new URLSearchParams(window.location.search);
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token') || 
-                                      hashParams.has('access_token') || urlParams.has('error');
-                
-                if (isOAuthCallback) {
-                    console.log('OAuth 콜백 중이므로 일반 Auth State Change 무시');
-                    return;
-                }
-                
-                console.log('일반 Auth 상태 변화:', event, session);
-                
-                if (event === 'SIGNED_IN' && session) {
-                    console.log('일반 로그인 성공, 앱 초기화 중...');
-                    currentUser = session.user;
-                    
-                    // 강제로 정식 모드 설정
-                    isDemoMode = false;
-                    console.log('Auth State Change - 강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
-                    
-                    // 사용자 프로필 설정 및 앱 표시
-                    try {
-                        const isApproved = await setupUserProfile();
-                        if (isApproved) {
-                            showApp();
-                            await checkUserPermissions(true);
-                            await updateNavigationTabs();
-                        }
-                    } catch (error) {
-                        console.error('로그인 후 설정 오류:', error);
-                    }
-                } else if (event === 'SIGNED_OUT') {
-                    console.log('로그아웃됨, 로그인 화면으로 이동');
-                    currentUser = null;
-                    showLogin();
-                }
-            });
+        // Supabase 초기화 (라이브러리 로드 확인)
+        function initializeSupabase() {
+            console.log('Supabase 초기화 시작...');
+            supabase = createSupabaseClient();
+            
+            if (!supabase) {
+                console.error('Supabase 초기화 실패');
+                // 데모 모드로 전환
+                isDemoMode = true;
+                showNotification('백엔드 연결에 실패했습니다. 데모 모드로 실행됩니다.', 'warning');
+                return false;
+            }
+            
+            console.log('Supabase 초기화 성공');
+            return true;
         }
+        
+        // 페이지 로드 시 Supabase 초기화
+        if (typeof window.supabase !== 'undefined') {
+            initializeSupabase();
+        } else {
+            console.log('Supabase 라이브러리 로딩 대기 중...');
+            // 라이브러리 로드를 기다림
+            let checkCount = 0;
+            const checkInterval = setInterval(() => {
+                checkCount++;
+                if (typeof window.supabase !== 'undefined') {
+                    clearInterval(checkInterval);
+                    initializeSupabase();
+                } else if (checkCount > 50) { // 5초 대기
+                    clearInterval(checkInterval);
+                    console.error('Supabase 라이브러리 로딩 시간 초과');
+                    isDemoMode = true;
+                    showNotification('백엔드 라이브러리 로딩 실패. 데모 모드로 실행됩니다.', 'warning');
+                }
+            }, 100);
+        }
+        
+        // Auth 상태 변화 감지 설정 함수
+        function setupAuthStateListener() {
+            if (!supabase) {
+                console.log('Supabase 클라이언트가 없어 Auth State Listener 설정 불가');
+                return;
+            }
+            
+            try {
+                const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+                    // OAuth 콜백 중인 경우 이 이벤트 리스너는 무시
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token') || 
+                                          hashParams.has('access_token') || urlParams.has('error');
+                    
+                    if (isOAuthCallback) {
+                        console.log('OAuth 콜백 중이므로 일반 Auth State Change 무시');
+                        return;
+                    }
+                    
+                    console.log('일반 Auth 상태 변화:', event, session);
+                    
+                    if (event === 'SIGNED_IN' && session) {
+                        console.log('일반 로그인 성공, 앱 초기화 중...');
+                        currentUser = session.user;
+                        
+                        // 강제로 정식 모드 설정
+                        isDemoMode = false;
+                        console.log('Auth State Change - 강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
+                        
+                        // 사용자 프로필 설정 및 앱 표시
+                        try {
+                            const isApproved = await setupUserProfile();
+                            if (isApproved) {
+                                showApp();
+                                await checkUserPermissions(true);
+                                await updateNavigationTabs();
+                            }
+                        } catch (error) {
+                            console.error('로그인 후 설정 오류:', error);
+                        }
+                    } else if (event === 'SIGNED_OUT') {
+                        console.log('로그아웃됨, 로그인 화면으로 이동');
+                        currentUser = null;
+                        showLogin();
+                    }
+                });
+                
+                console.log('Auth State Listener 설정 완료');
+                
+            } catch (error) {
+                console.error('Auth State Change 설정 오류:', error);
+            }
+        }
+        
+        // Supabase 초기화 후 Auth State Listener 설정
+        setTimeout(() => {
+            if (supabase) {
+                setupAuthStateListener();
+            }
+        }, 1000);
         
         // Supabase 연결 상태 확인 및 재연결 함수
         async function checkSupabaseConnection() {
@@ -6980,17 +7056,8 @@
             }
         }
         
-        // 앱 데이터 로드 (중복 호출 방지)
-        let isLoadingAppData = false;
+        // 앱 데이터 로드
         async function loadAppData() {
-            // 중복 호출 방지
-            if (isLoadingAppData) {
-                console.log('loadAppData가 이미 실행 중입니다. 중복 호출을 방지합니다.');
-                return;
-            }
-            
-            isLoadingAppData = true;
-            
             try {
                 // 데모 모드인지 확인
                 if (isDemoMode || (currentUser && currentUser.id.indexOf('demo-user-') === 0)) {
@@ -6999,22 +7066,13 @@
                     loadDemoData();
                 } else {
                     // 실제 모드: Supabase 기반
-                    console.log('정식 모드에서 Supabase 데이터 로드 - 한 번만 실행');
-                    
-                    // DOM이 로드될 때까지 잠시 대기
-                    if (!document.getElementById('workspaceList')) {
-                        console.log('DOM 로드 대기 중...');
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                    
+                    console.log('정식 모드에서 Supabase 데이터 로드');
                     await loadWorkspaces(); // 워크스페이스 로드 (내부에서 첫 워크스페이스 선택 및 프로젝트 로드)
                     await Promise.all([
                         loadTodos(),
                         loadNotifications(),
                         updateDashboard()
                     ]);
-                    
-                    console.log('정식 모드 데이터 로드 완료');
                 }
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
@@ -7025,8 +7083,6 @@
                 } else {
                     loadDemoData();
                 }
-            } finally {
-                isLoadingAppData = false;
             }
         }
         
@@ -7594,50 +7650,78 @@
             
             // Auth State Change 이벤트 등록 (한 번만 실행)
             let authHandled = false;
-            const unsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('OAuth 콜백 중 Auth 상태 변화:', event, session);
-                
-                if (authHandled) return; // 중복 처리 방지
-                
-                if (event === 'SIGNED_IN' && session) {
-                    authHandled = true;
-                    console.log('OAuth 로그인 성공!');
-                    
-                    currentUser = session.user;
-                    isDemoMode = false;
-                    
-                    // URL 정리
-                    const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-                    window.history.replaceState({}, '', cleanUrl);
-                    
-                    try {
-                        // 사용자 프로필 설정
-                        await setupUserProfile();
-                        
-                        // 앱 표시
-                        showApp();
-                        
-                        // 권한 확인 및 업데이트
-                        await checkUserPermissions(true);
-                        await updateNavigationTabs();
-                        
-                        console.log('OAuth 로그인 완료 - 앱 진입');
-                        unsubscribe(); // 이벤트 리스너 정리
-                        
-                    } catch (error) {
-                        console.error('OAuth 로그인 후 설정 오류:', error);
-                        showNotification('로그인 후 설정 중 오류가 발생했습니다.', 'error');
-                        showLogin();
-                        unsubscribe();
-                    }
-                } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-                    if (!authHandled) {
-                        console.log('OAuth 로그인 실패 - 로그인 화면으로');
-                        showLogin();
-                        unsubscribe();
-                    }
+            let authSubscription = null;
+            
+            try {
+                if (!supabase) {
+                    console.error('Supabase 클라이언트가 없어 OAuth 콜백 처리 불가');
+                    showNotification('백엔드 연결 실패', 'error');
+                    showLogin();
+                    return;
                 }
-            });
+                
+                const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+                    console.log('OAuth 콜백 중 Auth 상태 변화:', event, session);
+                    
+                    if (authHandled) return; // 중복 처리 방지
+                    
+                    if (event === 'SIGNED_IN' && session) {
+                        authHandled = true;
+                        console.log('OAuth 로그인 성공!');
+                        
+                        currentUser = session.user;
+                        isDemoMode = false;
+                        
+                        // URL 정리
+                        const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                        window.history.replaceState({}, '', cleanUrl);
+                        
+                        try {
+                            // 사용자 프로필 설정
+                            await setupUserProfile();
+                            
+                            // 앱 표시
+                            showApp();
+                            
+                            // 권한 확인 및 업데이트
+                            await checkUserPermissions(true);
+                            await updateNavigationTabs();
+                            
+                            console.log('OAuth 로그인 완료 - 앱 진입');
+                            
+                            // 이벤트 리스너 정리
+                            if (authSubscription && authSubscription.unsubscribe) {
+                                authSubscription.unsubscribe();
+                            }
+                            
+                        } catch (error) {
+                            console.error('OAuth 로그인 후 설정 오류:', error);
+                            showNotification('로그인 후 설정 중 오류가 발생했습니다.', 'error');
+                            showLogin();
+                            
+                            if (authSubscription && authSubscription.unsubscribe) {
+                                authSubscription.unsubscribe();
+                            }
+                        }
+                    } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+                        if (!authHandled) {
+                            console.log('OAuth 로그인 실패 - 로그인 화면으로');
+                            showLogin();
+                            
+                            if (authSubscription && authSubscription.unsubscribe) {
+                                authSubscription.unsubscribe();
+                            }
+                        }
+                    }
+                });
+                
+                authSubscription = authListener;
+                
+            } catch (error) {
+                console.error('Auth State Change 등록 오류:', error);
+                showNotification('인증 시스템 오류가 발생했습니다.', 'error');
+                showLogin();
+            }
             
             // 타임아웃 설정 (OAuth 콜백은 더 오래 기다림)
             setTimeout(() => {
@@ -7645,7 +7729,10 @@
                     console.log('OAuth 콜백 타임아웃 - 로그인 화면으로');
                     showNotification('로그인 처리 시간이 초과되었습니다. 다시 시도해주세요.', 'error');
                     showLogin();
-                    unsubscribe();
+                    
+                    if (authSubscription && authSubscription.unsubscribe) {
+                        authSubscription.unsubscribe();
+                    }
                 }
             }, 10000); // 10초 대기
         }
@@ -8725,8 +8812,7 @@
             
             // DOM 요소 존재 확인
             if (!workspaceList) {
-                console.warn('workspaceList 요소를 찾을 수 없습니다. 앱이 아직 로드되지 않았을 수 있습니다.');
-                // 앱이 로드되지 않은 상태에서는 조용히 리턴
+                console.warn('workspaceList 요소를 찾을 수 없습니다.');
                 return;
             }
             
@@ -12026,10 +12112,15 @@
                         .single();
                     
                     if (!existingUser) {
-                        // 🚀 모든 구글 로그인 사용자를 슈퍼관리자로 고정
-                        console.log('🎯 모든 구글 로그인 사용자 → 슈퍼관리자 권한 부여');
+                        // 전체 사용자 수 확인 (첫 번째 사용자인지 판단)
+                        const { data: allUsers, error: countError } = await supabase
+                            .from('users')
+                            .select('id', { count: 'exact' });
                         
-                        // 새 사용자 생성 (UPSERT 사용) - 모든 사용자를 슈퍼관리자로
+                        const isFirstUser = !countError && (!allUsers || allUsers.length === 0);
+                        console.log('첫 번째 사용자 여부:', isFirstUser, '전체 사용자 수:', allUsers?.length || 0);
+                        
+                        // 새 사용자 생성 (UPSERT 사용)
                         const { error } = await supabase
                             .from('users')
                             .upsert({
@@ -12038,7 +12129,7 @@
                                 full_name: currentUser.user_metadata.full_name || currentUser.email.split('@')[0],
                                 avatar_url: currentUser.user_metadata.avatar_url,
                                 account_status: 'approved', // 자동 승인
-                                global_role: 'super_admin', // 🎯 모든 사용자를 슈퍼관리자로 고정
+                                global_role: isFirstUser ? 'super_admin' : 'user', // 첫 번째 사용자는 슈퍼관리자
                                 created_at: new Date().toISOString(),
                                 updated_at: new Date().toISOString()
                             }, {
@@ -12048,25 +12139,11 @@
                         if (error && error.code !== '23505') { // 중복 키 오류 무시
                             console.error('사용자 생성 오류:', error);
                         } else {
-                            console.log('👑 슈퍼관리자 권한으로 사용자 생성 완료');
-                            showNotification('👑 슈퍼관리자 권한이 부여되었습니다!', 'success');
-                        }
-                    } else {
-                        // 기존 사용자도 슈퍼관리자로 업데이트
-                        console.log('🔄 기존 사용자를 슈퍼관리자로 업데이트');
-                        const { error: updateError } = await supabase
-                            .from('users')
-                            .update({ 
-                                global_role: 'super_admin',
-                                account_status: 'approved',
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', currentUser.id);
-                        
-                        if (updateError) {
-                            console.error('사용자 권한 업데이트 오류:', updateError);
-                        } else {
-                            console.log('👑 기존 사용자 슈퍼관리자 권한 업데이트 완료');
+                            console.log('새 사용자 생성 완료 또는 이미 존재함');
+                            if (isFirstUser) {
+                                console.log('🎉 첫 번째 사용자로 슈퍼관리자 권한 부여됨');
+                                showNotification('🎉 첫 번째 사용자로 슈퍼관리자 권한이 부여되었습니다!', 'success');
+                            }
                         }
                     }
                 }
@@ -12122,24 +12199,7 @@
                     // 정식 모드 표시기 표시
                     showProductionModeIndicator();
                     
-                    // 🎯 모든 사용자를 슈퍼관리자로 강제 설정
-                    console.log('👑 모든 실제 사용자를 슈퍼관리자로 설정');
-                    
-                    // 사용자 메타데이터에 슈퍼관리자 권한 강제 추가
-                    currentUser.app_metadata = {
-                        ...currentUser.app_metadata,
-                        account_status: 'approved',
-                        global_role: 'super_admin' // 🎯 강제로 슈퍼관리자 설정
-                    };
-                    
-                    // 관리자 탭 표시 (항상)
-                    const adminTab = document.getElementById('adminNavTab');
-                    if (adminTab) {
-                        adminTab.style.display = 'block';
-                        console.log('👑 슈퍼관리자 권한 - 관리자 탭 표시');
-                    }
-                    
-                    // 사용자 권한 정보 업데이트 시도 (실패해도 계속 진행)
+                    // 사용자 권한 정보 가져오기 및 UI 업데이트
                     try {
                         const { data: userProfile } = await supabase
                             .from('users')
@@ -12147,30 +12207,27 @@
                             .eq('id', currentUser.id)
                             .single();
                         
-                        console.log('데이터베이스 사용자 권한 정보:', userProfile);
-                        
-                        // 데이터베이스에서도 슈퍼관리자가 아니면 업데이트
-                        if (!userProfile || userProfile.global_role !== 'super_admin') {
-                            console.log('🔄 데이터베이스에서 슈퍼관리자 권한 업데이트 시도');
-                            const { error: updateError } = await supabase
-                                .from('users')
-                                .update({ 
-                                    global_role: 'super_admin',
-                                    account_status: 'approved',
-                                    updated_at: new Date().toISOString()
-                                })
-                                .eq('id', currentUser.id);
+                        if (userProfile) {
+                            // 사용자 메타데이터에 권한 정보 추가
+                            currentUser.app_metadata = {
+                                ...currentUser.app_metadata,
+                                account_status: userProfile.account_status,
+                                global_role: userProfile.global_role
+                            };
                             
-                            if (updateError) {
-                                console.error('권한 업데이트 오류:', updateError);
-                            } else {
-                                console.log('👑 데이터베이스 슈퍼관리자 권한 업데이트 완료');
+                            console.log('사용자 권한 정보:', userProfile);
+                            
+                            // 슈퍼관리자인 경우 관리자 탭 표시
+                            if (userProfile.global_role === 'super_admin') {
+                                const adminTab = document.getElementById('adminNavTab');
+                                if (adminTab) {
+                                    adminTab.style.display = 'block';
+                                    console.log('슈퍼관리자 권한 확인 - 관리자 탭 표시');
+                                }
                             }
                         }
-                        
                     } catch (error) {
                         console.error('사용자 권한 정보 로드 오류:', error);
-                        console.log('오류가 발생했지만 슈퍼관리자 권한으로 계속 진행합니다.');
                     }
                     
                     // 자동 승인으로 처리 (테스트 환경)
