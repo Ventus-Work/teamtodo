@@ -188,6 +188,123 @@
             gap: 20px;
             flex-wrap: wrap;
         }
+
+        /* 구글 로그인 섹션 스타일 */
+        .google-login-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 32px;
+            margin-top: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0 0 8px 0;
+            text-align: center;
+        }
+
+        .login-subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            text-align: center;
+            margin: 0 0 24px 0;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .google-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .google-login-btn:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .divider {
+            position: relative;
+            text-align: center;
+            margin: 8px 0;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
+        .divider span {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0 16px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .demo-btn {
+            background: linear-gradient(45deg, #fbbf24, #f59e0b);
+            color: #1f2937;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+        }
+
+        /* 모바일 반응형 스타일 */
+        @media (max-width: 768px) {
+            .google-login-section {
+                margin-top: 24px;
+                padding: 24px;
+                max-width: 100%;
+            }
+
+            .login-title {
+                font-size: 20px;
+            }
+
+            .google-login-btn, 
+            .demo-btn {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+        }
         
         .cta-primary {
             background: linear-gradient(45deg, #fbbf24, #f59e0b);
@@ -4838,13 +4955,30 @@
                         </div>
                     </div>
                     
-                    <div class="hero-cta">
-                        <button class="cta-primary" onclick="showLoginModal()">
-                            🔑 로그인
-                        </button>
-                        <button class="cta-secondary" onclick="loginAsTestUser()">
-                            ✨ 데모 체험하기
-                        </button>
+                    <!-- 구글 로그인 섹션 -->
+                    <div class="google-login-section">
+                        <h3 class="login-title">로그인하여 시작하기</h3>
+                        <p class="login-subtitle">구글 계정으로 간편하게 로그인하세요</p>
+                        
+                        <div class="login-form">
+                            <button class="google-login-btn" onclick="signInWithGoogle()">
+                                <svg width="18" height="18" viewBox="0 0 24 24">
+                                    <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#fbbc05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                    <path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                </svg>
+                                구글로 로그인
+                            </button>
+                            
+                            <div class="divider">
+                                <span>또는</span>
+                            </div>
+                            
+                            <button class="demo-btn" onclick="loginAsTestUser()">
+                                ✨ 데모 체험하기
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -5119,7 +5253,6 @@
                 <button class="nav-tab" onclick="showSection('todos')" style="opacity: 0.5; pointer-events: none;" title="승인된 사용자만 사용 가능합니다">할 일 관리</button>
                 <button class="nav-tab" onclick="showSection('calendar')" style="opacity: 0.5; pointer-events: none;" title="승인된 사용자만 사용 가능합니다">달력</button>
                 <button id="adminNavTab" class="nav-tab" onclick="showSection('admin')" style="display: none;">👑 관리자</button>
-                <button id="upgradeNavTab" class="nav-tab" onclick="upgradeToProduction()" style="display: none; background: linear-gradient(45deg, #10b981, #059669); color: white; font-weight: 600;">🚀 정식 서비스로 전환</button>
             </div>
         </div>
 
@@ -6849,10 +6982,10 @@
                 
                 if (event === 'SIGNED_IN' && session) {
                     this.authHandled = true;
-                    console.log('OAuth 로그인 성공! 데모 모드로 시작합니다.');
+                    console.log('OAuth 로그인 성공!');
                     
                     currentUser = session.user;
-                    isDemoMode = true; // OAuth 로그인 후 데모 모드 우선 표시
+                    isDemoMode = false;
                     
                     // URL 정리
                     this.cleanupCallbackUrl();
@@ -6968,580 +7101,6 @@
             // html 파라미터가 이미 이스케이프된 경우에만 사용하세요
             element.innerHTML = html;
         }
-
-        // 통합 컴포넌트 렌더링 시스템
-        const ComponentRenderer = {
-            // 템플릿 저장소
-            templates: {
-                // 빈 상태 템플릿
-                emptyState: (icon, title, description) => `
-                    <div class="empty-state" style="text-align: center; padding: 50px; color: #a0aec0;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">${icon}</div>
-                        <h3 style="margin-bottom: 10px; color: #4a5568;">${escapeHTML(title)}</h3>
-                        <p style="margin: 0;">${escapeHTML(description)}</p>
-                    </div>
-                `,
-
-                // 로딩 상태 템플릿
-                loadingState: (message = '데이터를 불러오는 중...') => `
-                    <div class="loading-spinner" style="text-align: center; padding: 40px;">
-                        <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto 15px;"></div>
-                        <p style="color: #6b7280; margin: 0;">${escapeHTML(message)}</p>
-                    </div>
-                `,
-
-                // 오류 상태 템플릿
-                errorState: (message, canRetry = false) => `
-                    <div class="error-state" style="text-align: center; padding: 40px; color: #dc2626;">
-                        <div style="font-size: 32px; margin-bottom: 15px;">⚠️</div>
-                        <p style="margin-bottom: ${canRetry ? '20px' : '0'};">${escapeHTML(message)}</p>
-                        ${canRetry ? '<button onclick="window.location.reload()" class="btn btn-primary">다시 시도</button>' : ''}
-                    </div>
-                `,
-
-                // 할 일 카드 템플릿
-                todoCard: (todo, project, options = {}) => {
-                    const {
-                        showProject = true,
-                        showComments = true,
-                        showActions = true,
-                        compact = false
-                    } = options;
-
-                    const priorityColors = {
-                        '높음': '#dc2626',
-                        '보통': '#ea580c',
-                        '낮음': '#16a34a'
-                    };
-
-                    const statusIcons = {
-                        '대기': '⏸️',
-                        '진행중': '▶️',
-                        '완료': '✅',
-                        '보류': '⏸️'
-                    };
-
-                    const commentCount = todo.comments ? todo.comments.length : 0;
-                    const dueDateClass = todo.due_date && new Date(todo.due_date) < new Date() ? 'overdue' : '';
-
-                    return `
-                        <div class="todo-item ${todo.status === '완료' ? 'completed' : ''} ${dueDateClass}" 
-                             data-todo-id="${todo.id}" 
-                             onclick="showTodoDetail('${todo.id}')">
-                            <div class="todo-color-indicator" style="background: ${project?.color || '#6b7280'}"></div>
-                            <div class="todo-main-info">
-                                <div class="todo-header">
-                                    <h4 class="todo-title">${escapeHTML(todo.title)}</h4>
-                                    <div class="todo-meta">
-                                        <span class="todo-status">${statusIcons[todo.status] || '📝'} ${escapeHTML(todo.status)}</span>
-                                        <span class="todo-priority" style="color: ${priorityColors[todo.priority] || '#6b7280'}">
-                                            ${escapeHTML(todo.priority)}
-                                        </span>
-                                    </div>
-                                </div>
-                                ${todo.description ? `<p class="todo-description">${escapeHTML(todo.description)}</p>` : ''}
-                                <div class="todo-footer">
-                                    ${showProject && project ? `
-                                        <span class="todo-project">
-                                            <div class="project-color" style="background: ${project.color}"></div>
-                                            ${escapeHTML(project.name)}
-                                        </span>
-                                    ` : ''}
-                                    ${todo.due_date ? `
-                                        <span class="todo-due-date ${dueDateClass}">
-                                            📅 ${new Date(todo.due_date).toLocaleDateString('ko-KR')}
-                                        </span>
-                                    ` : ''}
-                                    ${showComments && commentCount > 0 ? `
-                                        <span class="todo-comments">💬 ${commentCount}</span>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            ${showActions ? `
-                                <div class="todo-actions">
-                                    <button onclick="event.stopPropagation(); toggleTodoStatus('${todo.id}')" 
-                                            class="btn btn-sm ${todo.status === '완료' ? 'btn-secondary' : 'btn-success'}">
-                                        ${todo.status === '완료' ? '되돌리기' : '완료'}
-                                    </button>
-                                    <button onclick="event.stopPropagation(); showEditTodoModal('${todo.id}')" 
-                                            class="btn btn-sm btn-primary">
-                                        수정
-                                    </button>
-                                    <button onclick="event.stopPropagation(); deleteTodo('${todo.id}')" 
-                                            class="btn btn-sm btn-danger">
-                                        삭제
-                                    </button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                },
-
-                // 프로젝트 카드 템플릿
-                projectCard: (project, options = {}) => {
-                    const { showActions = true, compact = false } = options;
-                    
-                    return `
-                        <div class="project-card" data-project-id="${project.id}">
-                            <div class="project-header">
-                                <div class="project-color" style="background: ${project.color}"></div>
-                                <h4 class="project-name">${escapeHTML(project.name)}</h4>
-                                ${showActions ? `
-                                    <div class="project-actions">
-                                        <button onclick="showEditProjectModal('${project.id}')" class="btn btn-sm btn-primary">수정</button>
-                                        <button onclick="deleteProject('${project.id}')" class="btn btn-sm btn-danger">삭제</button>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            ${project.description ? `<p class="project-description">${escapeHTML(project.description)}</p>` : ''}
-                            <div class="project-stats">
-                                <span class="stat-item">📝 ${project.todo_count || 0}개 할 일</span>
-                                <span class="stat-item">✅ ${project.completed_count || 0}개 완료</span>
-                            </div>
-                        </div>
-                    `;
-                },
-
-                // 사용자 카드 템플릿
-                userCard: (user, options = {}) => {
-                    const { showActions = true, showRole = true } = options;
-                    
-                    return `
-                        <div class="user-card" data-user-id="${user.id}">
-                            <div class="user-avatar">
-                                ${user.avatar_url ? 
-                                    `<img src="${user.avatar_url}" alt="${escapeHTML(user.display_name || user.email)}" />` :
-                                    `<div class="avatar-placeholder">${(user.display_name || user.email).charAt(0).toUpperCase()}</div>`
-                                }
-                            </div>
-                            <div class="user-info">
-                                <h4 class="user-name">${escapeHTML(user.display_name || user.full_name || user.email.split('@')[0])}</h4>
-                                <p class="user-email">${escapeHTML(user.email)}</p>
-                                ${showRole && user.role ? `<span class="user-role">${escapeHTML(user.role)}</span>` : ''}
-                            </div>
-                            ${showActions ? `
-                                <div class="user-actions">
-                                    <button onclick="editUserRole('${user.id}')" class="btn btn-sm btn-primary">역할 수정</button>
-                                    <button onclick="removeUser('${user.id}')" class="btn btn-sm btn-danger">제거</button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                },
-
-                // 통계 카드 템플릿
-                statCard: (icon, title, value, trend = null) => `
-                    <div class="stat-card">
-                        <div class="stat-icon">${icon}</div>
-                        <div class="stat-content">
-                            <h3 class="stat-value">${escapeHTML(String(value))}</h3>
-                            <p class="stat-title">${escapeHTML(title)}</p>
-                            ${trend ? `<span class="stat-trend ${trend.type}">${trend.icon} ${trend.text}</span>` : ''}
-                        </div>
-                    </div>
-                `,
-
-                // 알림 템플릿
-                notification: (notification, options = {}) => {
-                    const { showActions = true } = options;
-                    const timeAgo = this.formatTimeAgo(new Date(notification.created_at));
-                    
-                    return `
-                        <div class="notification-item ${notification.read ? 'read' : 'unread'}" data-notification-id="${notification.id}">
-                            <div class="notification-icon">${this.getNotificationIcon(notification.type)}</div>
-                            <div class="notification-content">
-                                <h4 class="notification-title">${escapeHTML(notification.title)}</h4>
-                                <p class="notification-message">${escapeHTML(notification.message)}</p>
-                                <span class="notification-time">${timeAgo}</span>
-                            </div>
-                            ${showActions ? `
-                                <div class="notification-actions">
-                                    ${!notification.read ? `<button onclick="markNotificationRead('${notification.id}')" class="btn btn-sm btn-primary">읽음</button>` : ''}
-                                    <button onclick="deleteNotification('${notification.id}')" class="btn btn-sm btn-danger">삭제</button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                },
-
-                // 댓글 템플릿
-                comment: (comment, options = {}) => {
-                    const { showActions = true, currentUserId } = options;
-                    const timeAgo = this.formatTimeAgo(new Date(comment.created_at));
-                    const isOwner = currentUserId && comment.author_id === currentUserId;
-                    
-                    return `
-                        <div class="comment-item" data-comment-id="${comment.id}">
-                            <div class="comment-header">
-                                <span class="comment-author">${escapeHTML(comment.author)}</span>
-                                <span class="comment-time">${timeAgo}</span>
-                            </div>
-                            <div class="comment-content" id="commentContent-${comment.id}">
-                                ${escapeHTML(comment.content)}
-                            </div>
-                            ${showActions && isOwner ? `
-                                <div class="comment-actions">
-                                    <button onclick="editComment('${comment.id}')" class="btn btn-sm btn-primary">수정</button>
-                                    <button onclick="deleteComment('${comment.id}')" class="btn btn-sm btn-danger">삭제</button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                }
-            },
-
-            // 렌더링 유틸리티
-            render: function(container, template, data = null) {
-                if (!container) {
-                    console.warn('ComponentRenderer.render: container가 null입니다.');
-                    return;
-                }
-                
-                try {
-                    if (typeof template === 'function') {
-                        container.innerHTML = template(data);
-                    } else {
-                        container.innerHTML = template;
-                    }
-                } catch (error) {
-                    console.error('ComponentRenderer.render 오류:', error);
-                    container.innerHTML = this.templates.errorState('렌더링 중 오류가 발생했습니다.');
-                }
-            },
-
-            // 리스트 렌더링
-            renderList: function(container, items, template, options = {}) {
-                if (!container) return;
-                
-                const {
-                    emptyMessage = '데이터가 없습니다.',
-                    emptyIcon = '📝',
-                    loading = false,
-                    loadingMessage = '데이터를 불러오는 중...'
-                } = options;
-
-                if (loading) {
-                    this.render(container, this.templates.loadingState(loadingMessage));
-                    return;
-                }
-
-                if (!items || items.length === 0) {
-                    this.render(container, this.templates.emptyState(emptyIcon, '데이터 없음', emptyMessage));
-                    return;
-                }
-
-                try {
-                    const html = items.map(item => {
-                        if (typeof template === 'function') {
-                            return template(item);
-                        } else if (typeof template === 'string' && this.templates[template]) {
-                            return this.templates[template](item);
-                        }
-                        return '';
-                    }).join('');
-                    
-                    container.innerHTML = html;
-                } catch (error) {
-                    console.error('ComponentRenderer.renderList 오류:', error);
-                    this.render(container, this.templates.errorState('목록 렌더링 중 오류가 발생했습니다.'));
-                }
-            },
-
-            // 조건부 렌더링
-            renderConditional: function(container, condition, trueTemplate, falseTemplate = null) {
-                if (!container) return;
-                
-                if (condition) {
-                    this.render(container, trueTemplate);
-                } else if (falseTemplate) {
-                    this.render(container, falseTemplate);
-                } else {
-                    container.innerHTML = '';
-                }
-            },
-
-            // 시간 포맷 유틸리티
-            formatTimeAgo: function(date) {
-                const now = new Date();
-                const diffInMs = now - date;
-                const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-                const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-                const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-                if (diffInMinutes < 1) return '방금 전';
-                if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
-                if (diffInHours < 24) return `${diffInHours}시간 전`;
-                if (diffInDays < 7) return `${diffInDays}일 전`;
-                
-                return date.toLocaleDateString('ko-KR');
-            },
-
-            // 알림 아이콘 유틸리티
-            getNotificationIcon: function(type) {
-                const icons = {
-                    'todo_assigned': '📝',
-                    'todo_completed': '✅',
-                    'comment_added': '💬',
-                    'project_updated': '📂',
-                    'workspace_joined': '👥',
-                    'system': '⚙️',
-                    'warning': '⚠️',
-                    'info': 'ℹ️'
-                };
-                return icons[type] || '📢';
-            },
-
-            // 필터 적용
-            applyFilters: function(items, filters) {
-                return items.filter(item => {
-                    for (const [key, value] of Object.entries(filters)) {
-                        if (value === '' || value === null || value === undefined) continue;
-                        
-                        if (key === 'search') {
-                            const searchable = [item.title, item.description, item.name].filter(Boolean).join(' ').toLowerCase();
-                            if (!searchable.includes(value.toLowerCase())) return false;
-                        } else if (Array.isArray(value)) {
-                            if (!value.includes(item[key])) return false;
-                        } else {
-                            if (item[key] !== value) return false;
-                        }
-                    }
-                    return true;
-                });
-            },
-
-            // 정렬 적용
-            applySorting: function(items, sortBy, sortOrder = 'asc') {
-                return [...items].sort((a, b) => {
-                    let aVal = a[sortBy];
-                    let bVal = b[sortBy];
-                    
-                    // 날짜 처리
-                    if (sortBy.includes('date') || sortBy.includes('time')) {
-                        aVal = new Date(aVal);
-                        bVal = new Date(bVal);
-                    }
-                    
-                    // 문자열 처리
-                    if (typeof aVal === 'string') {
-                        aVal = aVal.toLowerCase();
-                        bVal = bVal.toLowerCase();
-                    }
-                    
-                    let result = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-                    return sortOrder === 'desc' ? -result : result;
-                });
-            },
-
-            // 페이지네이션 적용
-            applyPagination: function(items, page = 1, itemsPerPage = 10) {
-                const startIndex = (page - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                
-                return {
-                    items: items.slice(startIndex, endIndex),
-                    totalPages: Math.ceil(items.length / itemsPerPage),
-                    currentPage: page,
-                    totalItems: items.length
-                };
-            },
-
-            // 검색 하이라이트
-            highlightSearchTerm: function(text, searchTerm) {
-                if (!searchTerm) return escapeHTML(text);
-                
-                const escapedText = escapeHTML(text);
-                const escapedTerm = escapeHTML(searchTerm);
-                const regex = new RegExp(`(${escapedTerm})`, 'gi');
-                
-                return escapedText.replace(regex, '<mark>$1</mark>');
-            },
-
-            // 일괄 렌더링 (여러 컨테이너에 동시 렌더링)
-            renderMultiple: function(renderTasks) {
-                const results = [];
-                
-                renderTasks.forEach(task => {
-                    try {
-                        const { container, template, data, type = 'single' } = task;
-                        
-                        if (type === 'list') {
-                            this.renderList(container, data, template, task.options || {});
-                        } else if (type === 'conditional') {
-                            this.renderConditional(container, task.condition, template, task.falseTemplate);
-                        } else {
-                            this.render(container, template, data);
-                        }
-                        
-                        results.push({ success: true, container });
-                    } catch (error) {
-                        console.error('renderMultiple 오류:', error);
-                        results.push({ success: false, container: task.container, error });
-                    }
-                });
-                
-                return results;
-            },
-
-            // 가상화된 리스트 렌더링 (대용량 데이터용)
-            renderVirtualList: function(container, items, template, options = {}) {
-                if (!container) return;
-                
-                const {
-                    itemHeight = 60,
-                    visibleCount = 10,
-                    bufferCount = 5
-                } = options;
-                
-                // 가상화가 필요하지 않은 경우 일반 렌더링
-                if (items.length <= visibleCount + bufferCount) {
-                    return this.renderList(container, items, template, options);
-                }
-                
-                let scrollTop = 0;
-                let startIndex = 0;
-                let endIndex = Math.min(visibleCount + bufferCount, items.length);
-                
-                const updateList = () => {
-                    startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - bufferCount);
-                    endIndex = Math.min(items.length, startIndex + visibleCount + bufferCount * 2);
-                    
-                    const visibleItems = items.slice(startIndex, endIndex);
-                    const offsetY = startIndex * itemHeight;
-                    
-                    container.innerHTML = `
-                        <div style="height: ${items.length * itemHeight}px; position: relative;">
-                            <div style="transform: translateY(${offsetY}px);">
-                                ${visibleItems.map(item => 
-                                    typeof template === 'function' ? template(item) : this.templates[template](item)
-                                ).join('')}
-                            </div>
-                        </div>
-                    `;
-                };
-                
-                container.addEventListener('scroll', () => {
-                    scrollTop = container.scrollTop;
-                    updateList();
-                });
-                
-                updateList();
-            },
-
-            // 레이지 로딩 렌더링
-            renderLazy: function(container, loadMoreCallback, options = {}) {
-                if (!container) return;
-                
-                const {
-                    threshold = 100,
-                    loadingTemplate = this.templates.loadingState(),
-                    errorTemplate = this.templates.errorState('데이터 로드 실패')
-                } = options;
-                
-                let isLoading = false;
-                
-                const checkScroll = () => {
-                    if (isLoading) return;
-                    
-                    const scrollTop = container.scrollTop;
-                    const scrollHeight = container.scrollHeight;
-                    const clientHeight = container.clientHeight;
-                    
-                    if (scrollTop + clientHeight >= scrollHeight - threshold) {
-                        isLoading = true;
-                        
-                        // 로딩 인디케이터 추가
-                        const loadingDiv = document.createElement('div');
-                        loadingDiv.innerHTML = loadingTemplate;
-                        container.appendChild(loadingDiv);
-                        
-                        loadMoreCallback()
-                            .then(newItems => {
-                                loadingDiv.remove();
-                                isLoading = false;
-                                
-                                if (newItems && newItems.length > 0) {
-                                    // 새 아이템들 렌더링 및 추가
-                                    newItems.forEach(item => {
-                                        const itemElement = document.createElement('div');
-                                        itemElement.innerHTML = typeof options.template === 'function' ? 
-                                            options.template(item) : this.templates[options.template](item);
-                                        container.appendChild(itemElement);
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                loadingDiv.innerHTML = errorTemplate;
-                                isLoading = false;
-                                console.error('레이지 로딩 오류:', error);
-                            });
-                    }
-                };
-                
-                container.addEventListener('scroll', checkScroll);
-                return () => container.removeEventListener('scroll', checkScroll);
-            },
-
-            // 성능 모니터링
-            performance: {
-                renderTimes: [],
-                
-                measureRender: function(fn, name = 'render') {
-                    const start = performance.now();
-                    const result = fn();
-                    const end = performance.now();
-                    const duration = end - start;
-                    
-                    this.renderTimes.push({ name, duration, timestamp: Date.now() });
-                    
-                    // 성능 임계치 체크 (16ms는 60fps 기준)
-                    if (duration > 16) {
-                        console.warn(`느린 렌더링 감지: ${name} - ${duration.toFixed(2)}ms`);
-                    }
-                    
-                    return result;
-                },
-                
-                getAverageTime: function(name) {
-                    const times = this.renderTimes
-                        .filter(t => !name || t.name === name)
-                        .map(t => t.duration);
-                    
-                    return times.length > 0 ? times.reduce((a, b) => a + b) / times.length : 0;
-                },
-                
-                clearStats: function() {
-                    this.renderTimes = [];
-                }
-            },
-
-            // 캐시 시스템
-            cache: {
-                templates: new Map(),
-                rendered: new Map(),
-                
-                setTemplate: function(key, template) {
-                    this.templates.set(key, template);
-                },
-                
-                getTemplate: function(key) {
-                    return this.templates.get(key);
-                },
-                
-                setRendered: function(key, html) {
-                    this.rendered.set(key, html);
-                },
-                
-                getRendered: function(key) {
-                    return this.rendered.get(key);
-                },
-                
-                clear: function() {
-                    this.templates.clear();
-                    this.rendered.clear();
-                }
-            }
-        };
         
         // 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -7571,7 +7130,7 @@
             
             if (isOAuthCallback) {
                 console.log('OAuth 콜백 감지됨, 전용 처리 시작...');
-                isDemoMode = true; // OAuth 로그인 후 데모 모드 우선 표시
+                isDemoMode = false; // OAuth 로그인은 항상 정식 모드
                 
                 // 콜백 오류 확인
                 if (urlParams.has('error')) {
@@ -7737,14 +7296,9 @@
                     console.log('세션 발견됨:', session);
                     currentUser = session.user;
                     
-                    // OAuth 콜백인 경우 데모 모드, 아니면 정식 모드
-                    if (isOAuthCallback) {
-                        isDemoMode = true;
-                        console.log('OAuth 세션 - 데모 모드로 설정됨: isDemoMode =', isDemoMode);
-                    } else {
-                        isDemoMode = false;
-                        console.log('일반 세션 - 정식 모드로 설정됨: isDemoMode =', isDemoMode);
-                    }
+                    // 강제로 정식 모드 설정
+                    isDemoMode = false;
+                    console.log('강제로 정식 모드 설정됨: isDemoMode =', isDemoMode);
                     
                     // OAuth 콜백 URL 정리
                     const urlParams = new URLSearchParams(window.location.search);
@@ -8827,64 +8381,37 @@
                 const pendingTodos = filteredTodos.filter(todo => todo.status === 'pending').length;
                 const inProgressTodos = filteredTodos.filter(todo => todo.status === 'in_progress').length;
                 
-                // 통계 카드들 데이터 준비
-                const statsData = [
-                    {
-                        title: '전체 할 일',
-                        value: totalTodos,
-                        icon: '📊',
-                        color: '#0369a1',
-                        bgColor: dashboardFilter.status === null ? '#f0f9ff' : '#f8fafc',
-                        active: dashboardFilter.status === null,
-                        onClick: 'filterDashboardByStatus(null)'
-                    },
-                    {
-                        title: '완료됨',
-                        value: completedTodos,
-                        icon: '✅',
-                        color: '#15803d',
-                        bgColor: dashboardFilter.status === 'completed' ? '#f0fdf4' : '#f8fafc',
-                        active: dashboardFilter.status === 'completed',
-                        onClick: 'filterDashboardByStatus("completed")'
-                    },
-                    {
-                        title: '진행 중',
-                        value: inProgressTodos,
-                        icon: '🔄',
-                        color: '#2563eb',
-                        bgColor: dashboardFilter.status === 'in_progress' ? '#eff6ff' : '#f8fafc',
-                        active: dashboardFilter.status === 'in_progress',
-                        onClick: 'filterDashboardByStatus("in_progress")'
-                    },
-                    {
-                        title: '대기 중',
-                        value: pendingTodos,
-                        icon: '⏳',
-                        color: '#dc2626',
-                        bgColor: dashboardFilter.status === 'pending' ? '#fef2f2' : '#f8fafc',
-                        active: dashboardFilter.status === 'pending',
-                        onClick: 'filterDashboardByStatus("pending")'
-                    }
-                ];
-                
-                // 대시보드 통계 카드 템플릿
-                const dashboardStatCard = (stat) => `
-                    <div class="dashboard-stat-card ${stat.active ? 'active' : ''}" 
-                         onclick="${stat.onClick}" 
-                         style="background: ${stat.bgColor};">
-                        <div class="stat-icon">${stat.icon}</div>
-                        <div class="stat-content">
-                            <div class="stat-number">${stat.value}</div>
-                            <div class="stat-title" style="color: ${stat.color};">${stat.title}</div>
-                        </div>
+                // 클릭 가능한 통계 카드 렌더링
+                const dashboardHTML = `
+                    <div class="dashboard-stat-card ${dashboardFilter.status === null ? 'active' : ''}" 
+                         onclick="filterDashboardByStatus(null)" 
+                         style="background: ${dashboardFilter.status === null ? '#f0f9ff' : '#f8fafc'};">
+                        <div class="stat-title" style="color: #0369a1;">전체 할 일</div>
+                        <div class="stat-number">${totalTodos}</div>
+                    </div>
+                    <div class="dashboard-stat-card ${dashboardFilter.status === 'completed' ? 'active' : ''}" 
+                         onclick="filterDashboardByStatus('completed')" 
+                         style="background: ${dashboardFilter.status === 'completed' ? '#f0fdf4' : '#f8fafc'};">
+                        <div class="stat-title" style="color: #15803d;">완료됨</div>
+                        <div class="stat-number">${completedTodos}</div>
+                    </div>
+                    <div class="dashboard-stat-card ${dashboardFilter.status === 'in_progress' ? 'active' : ''}" 
+                         onclick="filterDashboardByStatus('in_progress')" 
+                         style="background: ${dashboardFilter.status === 'in_progress' ? '#eff6ff' : '#f8fafc'};">
+                        <div class="stat-title" style="color: #2563eb;">진행 중</div>
+                        <div class="stat-number">${inProgressTodos}</div>
+                    </div>
+                    <div class="dashboard-stat-card ${dashboardFilter.status === 'pending' ? 'active' : ''}" 
+                         onclick="filterDashboardByStatus('pending')" 
+                         style="background: ${dashboardFilter.status === 'pending' ? '#fef2f2' : '#f8fafc'};">
+                        <div class="stat-title" style="color: #dc2626;">대기 중</div>
+                        <div class="stat-number">${pendingTodos}</div>
                     </div>
                 `;
                 
-                const dashboardHTML = statsData.map(dashboardStatCard).join('');
-                
                 const dashboardStatsElement = document.getElementById('dashboardStats');
                 if (dashboardStatsElement) {
-                    ComponentRenderer.render(dashboardStatsElement, dashboardHTML);
+                    dashboardStatsElement.innerHTML = dashboardHTML;
                 } else {
                     console.warn('dashboardStats 요소를 찾을 수 없습니다.');
                 }
@@ -8905,7 +8432,7 @@
             const filterSelect = document.getElementById('dashboardProjectFilter');
             if (!filterSelect) return;
             
-            ComponentRenderer.render(filterSelect, '<option value="">모든 프로젝트</option>');
+            filterSelect.innerHTML = '<option value="">모든 프로젝트</option>';
             
             const workspaceProjects = projects.filter(p => p.workspace_id === currentWorkspace?.id);
             workspaceProjects.forEach(project => {
@@ -8950,27 +8477,27 @@
                     if (container && countBadge) {
                         countBadge.textContent = `${filteredTodos.length}개`;
                         
-                        // 대시보드 할 일 카드 템플릿
-                        const dashboardTodoCard = (todo) => {
-                            const project = projects.find(p => p.id === todo.project_id);
-                            const priorityClass = todo.priority === 'high' ? 'priority-high' : 
-                                               todo.priority === 'medium' ? 'priority-medium' : 'priority-low';
-                            
-                            return `
-                                <div class="dashboard-todo-item ${todo.status === 'completed' ? 'completed' : ''}">
-                                    <div class="todo-info">
-                                        <h4>${escapeHTML(todo.title)}</h4>
-                                        <p>${escapeHTML(project ? project.name : '프로젝트 없음')} • ${escapeHTML(todo.priority)} 우선순위</p>
+                        if (filteredTodos.length === 0) {
+                            container.innerHTML = '<div class="empty-state">할 일이 없습니다. 새로운 할 일을 추가해보세요!</div>';
+                        } else {
+                            let html = '';
+                            filteredTodos.forEach(todo => {
+                                const project = projects.find(p => p.id === todo.project_id);
+                                const priorityClass = todo.priority === 'high' ? 'priority-high' : 
+                                                   todo.priority === 'medium' ? 'priority-medium' : 'priority-low';
+                                
+                                html += `
+                                    <div class="dashboard-todo-item ${todo.status === 'completed' ? 'completed' : ''}">
+                                        <div class="todo-info">
+                                            <h4>${todo.title}</h4>
+                                            <p>${project ? project.name : '프로젝트 없음'} • ${todo.priority} 우선순위</p>
+                                        </div>
+                                        <div class="todo-status ${priorityClass}">${todo.status === 'completed' ? '완료' : '진행중'}</div>
                                     </div>
-                                    <div class="todo-status ${priorityClass}">${todo.status === 'completed' ? '완료' : '진행중'}</div>
-                                </div>
-                            `;
-                        };
-                        
-                        ComponentRenderer.renderList(container, filteredTodos, dashboardTodoCard, {
-                            emptyMessage: '할 일이 없습니다. 새로운 할 일을 추가해보세요!',
-                            emptyIcon: '📝'
-                        });
+                                `;
+                            });
+                            container.innerHTML = html;
+                        }
                     }
                 }, 100);
                 return; // 함수 조기 종료
@@ -9693,73 +9220,71 @@
             }
         }
         
-        // 워크스페이스 렌더링 (ComponentRenderer 사용)
+        // 워크스페이스 렌더링
         function renderWorkspaces() {
             const workspaceList = document.getElementById('workspaceList');
             
+            // DOM 요소 존재 확인
             if (!workspaceList) {
                 console.warn('workspaceList 요소를 찾을 수 없습니다.');
                 return;
             }
             
-            // 워크스페이스 카드 템플릿
-            const workspaceCard = (workspace) => `
-                <div class="workspace-card ${currentWorkspace?.id === workspace.id ? 'active' : ''}" 
-                     onclick="selectWorkspace('${workspace.id}')" data-workspace-id="${workspace.id}">
+            if (workspaces.length === 0) {
+                workspaceList.innerHTML = '<div style="text-align: center; color: #9ca3af; grid-column: 1/-1; padding: 50px;">워크스페이스가 없습니다. 새로 만들어보세요!</div>';
+                return;
+            }
+            
+            const workspacesHTML = workspaces.map(workspace => `
+                <div class="workspace-card ${currentWorkspace?.id === workspace.id ? 'active' : ''}" onclick="selectWorkspace('${workspace.id}')">
                     <div class="workspace-name">${escapeHTML(workspace.name)}</div>
                     <div class="workspace-desc">${escapeHTML(workspace.description || '설명이 없습니다.')}</div>
                     <div class="workspace-meta">
                         <span>생성일: ${new Date(workspace.created_at).toLocaleDateString()}</span>
                     </div>
                 </div>
-            `;
+            `).join('');
             
-            ComponentRenderer.renderList(workspaceList, workspaces, workspaceCard, {
-                emptyMessage: '워크스페이스가 없습니다. 새로 만들어보세요!',
-                emptyIcon: '🏢'
-            });
+            workspaceList.innerHTML = workspacesHTML;
         }
         
-        // 할 일 렌더링 (통합된 버전 - 워크스페이스용)
-        function renderTodosList() {
+        // 할 일 렌더링
+        function renderTodos() {
             const todoList = document.getElementById('todoList');
             
+            // DOM 요소 존재 확인
             if (!todoList) {
                 console.warn('todoList 요소를 찾을 수 없습니다.');
                 return;
             }
             
-            // 간단한 할 일 카드 템플릿 (워크스페이스 뷰용)
-            const simpleTodoCard = (todo) => {
-                const project = projects.find(p => p.id === todo.project_id);
-                
-                return `
-                    <div class="todo-item ${todo.priority} ${todo.status === 'completed' ? 'completed' : ''}">
-                        <div class="todo-content">
-                            <div class="todo-info">
-                                <div class="todo-title">${escapeHTML(todo.title)}</div>
-                                <div class="todo-meta">
-                                    <span>우선순위: ${getPriorityText(todo.priority)}</span>
-                                    <span>상태: ${getStatusText(todo.status)}</span>
-                                    ${todo.due_date ? `<span>마감일: ${new Date(todo.due_date).toLocaleDateString()}</span>` : ''}
-                                    <span>담당자: ${escapeHTML(todo.assigned_user?.full_name || '미지정')}</span>
-                                    ${project ? `<span>프로젝트: ${escapeHTML(project.name)}</span>` : ''}
-                                </div>
-                                ${todo.description ? `<div class="todo-description">${escapeHTML(todo.description)}</div>` : ''}
+            if (todos.length === 0) {
+                todoList.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 50px;">할 일이 없습니다. 새로 추가해보세요!</div>';
+                return;
+            }
+            
+            const todosHTML = todos.map(todo => `
+                <div class="todo-item ${todo.priority} ${todo.status === 'completed' ? 'completed' : ''}">
+                    <div class="todo-content">
+                        <div class="todo-info">
+                            <div class="todo-title">${escapeHTML(todo.title)}</div>
+                            <div class="todo-meta">
+                                <span>우선순위: ${getPriorityText(todo.priority)}</span>
+                                <span>상태: ${getStatusText(todo.status)}</span>
+                                ${todo.due_date ? `<span>마감일: ${new Date(todo.due_date).toLocaleDateString()}</span>` : ''}
+                                <span>담당자: ${escapeHTML(todo.assigned_user?.full_name || '미지정')}</span>
                             </div>
-                            <div class="todo-actions">
-                                ${todo.status !== 'completed' ? `<button class="btn-sm btn-complete" onclick="completeTodo('${todo.id}')">완료</button>` : ''}
-                                <button class="btn-sm btn-delete" onclick="deleteTodo('${todo.id}')">삭제</button>
-                            </div>
+                            ${todo.description ? `<div class="todo-description">${escapeHTML(todo.description)}</div>` : ''}
+                        </div>
+                        <div class="todo-actions">
+                            ${todo.status !== 'completed' ? `<button class="btn-sm btn-complete" onclick="completeTodo('${todo.id}')">완료</button>` : ''}
+                            <button class="btn-sm btn-delete" onclick="deleteTodo('${todo.id}')">삭제</button>
                         </div>
                     </div>
-                `;
-            };
+                </div>
+            `).join('');
             
-            ComponentRenderer.renderList(todoList, todos, simpleTodoCard, {
-                emptyMessage: '할 일이 없습니다. 새로 추가해보세요!',
-                emptyIcon: '📝'
-            });
+            todoList.innerHTML = todosHTML;
             
             // 통계 업데이트
             const totalTodos = todos.length;
@@ -9773,19 +9298,29 @@
             });
         }
         
-        // 알림 렌더링 (ComponentRenderer 사용)
+        // 알림 렌더링
         function renderNotifications(notifications) {
             const notificationList = document.getElementById('notificationList');
             
-            if (!notificationList) {
-                console.warn('notificationList 요소를 찾을 수 없습니다.');
+            if (notifications.length === 0) {
+                notificationList.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 50px;">알림이 없습니다.</div>';
                 return;
             }
             
-            ComponentRenderer.renderList(notificationList, notifications, ComponentRenderer.templates.notification, {
-                emptyMessage: '알림이 없습니다.',
-                emptyIcon: '🔔'
-            });
+            const notificationsHTML = notifications.map(notif => `
+                <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 4px solid #667eea;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">${notif.title}</div>
+                            <div style="color: #6b7280; margin-bottom: 10px;">${notif.message}</div>
+                            <div style="font-size: 12px; color: #9ca3af;">${new Date(notif.created_at).toLocaleString()}</div>
+                        </div>
+                        ${!notif.is_read ? '<div style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></div>' : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            notificationList.innerHTML = notificationsHTML;
         }
         
         // ==================== 역할 및 탭 권한 관리 ====================
@@ -10501,10 +10036,17 @@
             }
         }
         
-        // 작업 요청 목록 렌더링 (ComponentRenderer 사용)
+        // 작업 요청 목록 렌더링
         function renderActionRequests(requests) {
             const actionRequestsList = document.getElementById('actionRequestsList');
             if (!actionRequestsList) return;
+            
+            actionRequestsList.innerHTML = '';
+            
+            if (!requests || requests.length === 0) {
+                actionRequestsList.innerHTML = '<div class="empty-state">표시할 작업 요청이 없습니다.</div>';
+                return;
+            }
             
             const actionTypeNames = {
                 'approve': '사용자 승인',
@@ -10522,57 +10064,54 @@
                 'cancelled': '취소됨'
             };
             
-            // 작업 요청 카드 템플릿
-            const actionRequestCard = (request) => {
+            const formatDate = (dateString) => {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ko-KR', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+            
+            requests.forEach(request => {
+                const requestItem = document.createElement('div');
+                requestItem.className = `action-request-item status-${request.status}`;
+                
                 let actionDetails = '';
                 if (request.action_type === 'change_role' && request.action_details?.new_role) {
                     actionDetails = ` → ${request.action_details.new_role}`;
                 }
                 
-                const formatDate = (dateString) => {
-                    const date = new Date(dateString);
-                    return date.toLocaleDateString('ko-KR', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                };
-                
-                return `
-                    <div class="action-request-item status-${request.status}">
-                        <div class="action-request-info">
-                            <div class="action-request-header">
-                                <span class="action-type-badge ${request.action_type}">${actionTypeNames[request.action_type] || request.action_type}${actionDetails}</span>
-                                <span class="action-status-badge ${request.status}">${statusNames[request.status]}</span>
-                            </div>
-                            <div class="action-request-details">
-                                <div class="target-user">
-                                    <strong>대상 사용자:</strong> ${escapeHTML(request.target_user_name)} (${escapeHTML(request.target_user_email)})
-                                </div>
-                                <div class="requested-by">
-                                    <strong>요청자:</strong> ${escapeHTML(request.requested_by_name)}
-                                </div>
-                                <div class="requested-at">
-                                    <strong>요청 시간:</strong> ${formatDate(request.requested_at)}
-                                </div>
-                                ${request.reason ? `<div class="request-reason"><strong>사유:</strong> ${escapeHTML(request.reason)}</div>` : ''}
-                            </div>
+                requestItem.innerHTML = `
+                    <div class="action-request-info">
+                        <div class="action-request-header">
+                            <span class="action-type-badge ${request.action_type}">${actionTypeNames[request.action_type] || request.action_type}${actionDetails}</span>
+                            <span class="action-status-badge ${request.status}">${statusNames[request.status]}</span>
                         </div>
-                        <div class="action-request-actions">
-                            ${request.status === 'pending' && (currentUser.app_metadata?.global_role === 'super_admin') ? 
-                                `<button class="action-btn" onclick="openReviewActionModal(${request.request_id})">검토</button>` : 
-                                '<span class="muted-text">-</span>'
-                            }
+                        <div class="action-request-details">
+                            <div class="target-user">
+                                <strong>대상 사용자:</strong> ${request.target_user_name} (${request.target_user_email})
+                            </div>
+                            <div class="requested-by">
+                                <strong>요청자:</strong> ${request.requested_by_name}
+                            </div>
+                            <div class="requested-at">
+                                <strong>요청 시간:</strong> ${formatDate(request.requested_at)}
+                            </div>
+                            ${request.reason ? `<div class="request-reason"><strong>사유:</strong> ${request.reason}</div>` : ''}
                         </div>
                     </div>
+                    <div class="action-request-actions">
+                        ${request.status === 'pending' && (currentUser.app_metadata?.global_role === 'super_admin') ? 
+                            `<button class="action-btn" onclick="openReviewActionModal(${request.request_id})">검토</button>` : 
+                            '<span class="muted-text">-</span>'
+                        }
+                    </div>
                 `;
-            };
-            
-            ComponentRenderer.renderList(actionRequestsList, requests, actionRequestCard, {
-                emptyMessage: '표시할 작업 요청이 없습니다.',
-                emptyIcon: '📋'
+                
+                actionRequestsList.appendChild(requestItem);
             });
         }
         
@@ -11074,13 +10613,8 @@
             }
         }
         
-        // 사용자 테이블 렌더링 (ComponentRenderer 사용)
+        // 사용자 테이블 렌더링 (공통 함수)
         function renderUserTable(users, tableBody) {
-            if (!tableBody) {
-                console.warn('tableBody 요소를 찾을 수 없습니다.');
-                return;
-            }
-            
             if (!users || users.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
@@ -11436,10 +10970,13 @@
             renderPermissions(demoPermissions[roleName] || []);
         }
         
-        // 관리자 활동 로그 로드 (ComponentRenderer 사용)
+        // 관리자 활동 로그 로드
         function loadAdminLogs() {
             const logsContainer = document.getElementById('adminLogs');
             if (!logsContainer) return;
+            
+            // 목록 초기화
+            logsContainer.innerHTML = '';
             
             // 활동 로그 데이터 로드
             let logs = [];
@@ -11452,20 +10989,18 @@
                 return;
             }
             
-            // 날짜순 정렬 (최신순)
-            logs = ComponentRenderer.applySorting(logs, 'created_at', 'desc');
+            if (logs.length === 0) {
+                logsContainer.innerHTML = '<div class="empty-state">관리자 활동 기록이 없습니다.</div>';
+                return;
+            }
             
-            // 관리자 로그 카드 템플릿
-            const adminLogCard = (log) => {
-                const getActionIcon = (action) => {
-                    const icons = {
-                        'approve_user': '<span class="log-icon approve-icon">✓</span>',
-                        'reject_user': '<span class="log-icon reject-icon">✗</span>',
-                        'suspend_user': '<span class="log-icon suspend-icon">⚠</span>',
-                        'promote_user': '<span class="log-icon promote-icon">★</span>'
-                    };
-                    return icons[action] || '<span class="log-icon">•</span>';
-                };
+            // 날짜순 정렬 (최신순)
+            logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            // 활동 로그 표시
+            logs.forEach(log => {
+                const logItem = document.createElement('div');
+                logItem.className = 'admin-log-item';
                 
                 const formatDate = (dateString) => {
                     const date = new Date(dateString);
@@ -11478,25 +11013,36 @@
                     });
                 };
                 
-                return `
-                    <div class="admin-log-item">
-                        <div class="admin-log-info">
-                            ${getActionIcon(log.action)}
-                            <div class="admin-log-details">
-                                <div class="admin-log-action">
-                                    <span class="admin-name">${escapeHTML(log.admin_name)}</span>님이 
-                                    <span class="target-name">${escapeHTML(log.target_name)}</span>님의 ${escapeHTML(log.details)}
-                                </div>
-                                <div class="admin-log-time">${formatDate(log.created_at)}</div>
+                // 작업 유형에 따른 아이콘
+                const getActionIcon = (action) => {
+                    switch(action) {
+                        case 'approve_user':
+                            return '<span class="log-icon approve-icon">✓</span>';
+                        case 'reject_user':
+                            return '<span class="log-icon reject-icon">✗</span>';
+                        case 'suspend_user':
+                            return '<span class="log-icon suspend-icon">⚠</span>';
+                        case 'promote_user':
+                            return '<span class="log-icon promote-icon">★</span>';
+                        default:
+                            return '<span class="log-icon">•</span>';
+                    }
+                };
+                
+                logItem.innerHTML = `
+                    <div class="admin-log-info">
+                        ${getActionIcon(log.action)}
+                        <div class="admin-log-details">
+                            <div class="admin-log-action">
+                                <span class="admin-name">${log.admin_name}</span>님이 
+                                <span class="target-name">${log.target_name}</span>님의 ${log.details}
                             </div>
+                            <div class="admin-log-time">${formatDate(log.created_at)}</div>
                         </div>
                     </div>
                 `;
-            };
-            
-            ComponentRenderer.renderList(logsContainer, logs, adminLogCard, {
-                emptyMessage: '관리자 활동 기록이 없습니다.',
-                emptyIcon: '📋'
+                
+                logsContainer.appendChild(logItem);
             });
         }
         
@@ -12169,16 +11715,6 @@
                     adminTab.style.display = 'block';
                 } else {
                     adminTab.style.display = 'none';
-                }
-            }
-            
-            // 업그레이드 탭 (데모 모드일 때만 표시)
-            const upgradeTab = document.getElementById('upgradeNavTab');
-            if (upgradeTab) {
-                if (isDemoMode && currentUser) {
-                    upgradeTab.style.display = 'block';
-                } else {
-                    upgradeTab.style.display = 'none';
                 }
             }
             
@@ -12872,6 +12408,36 @@
             document.body.insertAdjacentHTML('beforeend', guideHtml);
         }
         
+        // 구글 OAuth 로그인 함수
+        async function signInWithGoogle() {
+            try {
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0;"></div> 로그인 중...';
+                
+                const { data, error } = await APIManager.auth.signInWithOAuth('google', {
+                    redirectTo: window.location.origin
+                });
+                
+                if (error) {
+                    console.error('구글 로그인 에러:', error);
+                    alert('로그인에 실패했습니다. 다시 시도해주세요.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    return;
+                }
+                
+                // 구글 로그인 성공 시 URL로 리다이렉트됨
+            } catch (error) {
+                console.error('구글 로그인 에러:', error);
+                alert('로그인에 실패했습니다. 다시 시도해주세요.');
+                const btn = event.target;
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
         // 데모 모드로 직접 진입하는 간단한 함수
         async function loginAsTestUser() {
             // 모달이 있다면 닫기
@@ -12941,129 +12507,6 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
-            }
-        }
-        
-        // 정식 서비스로 전환하는 함수
-        async function upgradeToProduction() {
-            if (!currentUser) {
-                showNotification('로그인이 필요합니다.', 'error');
-                return;
-            }
-            
-            if (!isDemoMode) {
-                showNotification('이미 정식 서비스를 사용 중입니다.', 'info');
-                return;
-            }
-            
-            const confirmed = confirm('데모 데이터를 정식 서비스로 마이그레이션하시겠습니까?\n\n⚠️ 주의사항:\n- 데모 데이터가 정식 서비스로 복사됩니다\n- 정식 서비스에서는 실제 데이터베이스를 사용합니다\n- 이 작업은 되돌릴 수 없습니다');
-            
-            if (!confirmed) return;
-            
-            try {
-                showNotification('데이터 마이그레이션을 시작합니다...', 'info');
-                
-                // 1. 데모 데이터 수집
-                const demoProjects = JSON.parse(localStorage.getItem('demo_projects') || '[]');
-                const demoTodos = JSON.parse(localStorage.getItem('demo_todos') || '[]');
-                const demoComments = JSON.parse(localStorage.getItem('demo_comments') || '[]');
-                const demoWorkspaces = JSON.parse(localStorage.getItem('demo_workspaces') || '[]');
-                
-                // 2. 정식 모드로 전환
-                isDemoMode = false;
-                
-                // 3. 데이터 마이그레이션 (실제 Supabase에 저장)
-                let migratedData = {
-                    projects: 0,
-                    todos: 0,
-                    comments: 0,
-                    workspaces: 0
-                };
-                
-                // 워크스페이스 마이그레이션
-                for (const workspace of demoWorkspaces) {
-                    if (workspace.id.startsWith('demo-')) {
-                        const newWorkspace = {
-                            ...workspace,
-                            id: undefined, // 새 ID 생성
-                            created_by: currentUser.id,
-                            updated_at: new Date().toISOString()
-                        };
-                        
-                        try {
-                            await APIManager.insert('workspaces', newWorkspace);
-                            migratedData.workspaces++;
-                        } catch (error) {
-                            console.warn('워크스페이스 마이그레이션 오류:', error);
-                        }
-                    }
-                }
-                
-                // 프로젝트 마이그레이션
-                for (const project of demoProjects) {
-                    if (project.id.startsWith('demo-')) {
-                        const newProject = {
-                            ...project,
-                            id: undefined, // 새 ID 생성
-                            created_by: currentUser.id,
-                            updated_at: new Date().toISOString()
-                        };
-                        
-                        try {
-                            await APIManager.insert('projects', newProject);
-                            migratedData.projects++;
-                        } catch (error) {
-                            console.warn('프로젝트 마이그레이션 오류:', error);
-                        }
-                    }
-                }
-                
-                // 할 일 마이그레이션
-                for (const todo of demoTodos) {
-                    if (todo.id.startsWith('demo-')) {
-                        const newTodo = {
-                            ...todo,
-                            id: undefined, // 새 ID 생성
-                            assigned_to: currentUser.id,
-                            created_by: currentUser.id,
-                            updated_at: new Date().toISOString()
-                        };
-                        
-                        try {
-                            await APIManager.insert('todos', newTodo);
-                            migratedData.todos++;
-                        } catch (error) {
-                            console.warn('할 일 마이그레이션 오류:', error);
-                        }
-                    }
-                }
-                
-                // 4. 네비게이션 업데이트
-                await updateNavigationTabs();
-                
-                // 5. 데이터 새로고침
-                await loadTodos();
-                await loadProjects();
-                await updateDashboard();
-                
-                // 6. 성공 메시지
-                showNotification(
-                    `🎉 정식 서비스로 전환 완료!\n\n마이그레이션된 데이터:\n- 워크스페이스: ${migratedData.workspaces}개\n- 프로젝트: ${migratedData.projects}개\n- 할 일: ${migratedData.todos}개`, 
-                    'success'
-                );
-                
-                // 7. 업그레이드 버튼 숨기기
-                const upgradeTab = document.getElementById('upgradeNavTab');
-                if (upgradeTab) {
-                    upgradeTab.style.display = 'none';
-                }
-                
-            } catch (error) {
-                console.error('데이터 마이그레이션 오류:', error);
-                showNotification('데이터 마이그레이션 중 오류가 발생했습니다: ' + error.message, 'error');
-                
-                // 오류 시 데모 모드로 롤백
-                isDemoMode = true;
             }
         }
         
@@ -14185,57 +13628,78 @@
             // 이미 container DOM 요소는 위에서 캐싱됨
             container.innerHTML = '';
             
-            // ComponentRenderer를 사용한 할 일 렌더링
-            const dateModalTodoRenderer = (todo) => {
-                const project = projects.find(p => p.id === todo.project_id);
-                
-                // 상태 매핑
-                const statusMapping = {
-                    'pending': '대기중',
-                    'in_progress': '진행중',
-                    'completed': '완료'
-                };
-                todo.status = statusMapping[todo.status] || todo.status;
-                
-                return `
-                    <div class="enhanced-date-todo-item" data-todo-id="${todo.id}" onclick="showTodoDetailModal('${todo.id}')">
-                        <div class="todo-color-indicator" style="background: ${project?.color || '#6b7280'}"></div>
-                        <div class="todo-main-info">
-                            <div class="todo-title-enhanced">${escapeHTML(todo.title)}</div>
-                            <div class="todo-meta-info">
-                                <span class="todo-project-name" style="background: ${project?.color}20; color: ${project?.color || '#4a5568'}">
-                                    ${escapeHTML(project?.name || '프로젝트 없음')}
-                                </span>
-                                ${todo.start_date || todo.due_date ? `
-                                    <span class="todo-dates-info">
-                                        ${todo.start_date ? `시작: ${new Date(todo.start_date).toLocaleDateString('ko-KR')}` : ''}
-                                        ${todo.start_date && todo.due_date ? ' • ' : ''}
-                                        ${todo.due_date ? `마감: ${new Date(todo.due_date).toLocaleDateString('ko-KR')}` : ''}
-                                    </span>
-                                ` : ''}
-                            </div>
-                            ${todo.description ? `
-                                <div class="todo-description-preview">
-                                    ${escapeHTML(todo.description.length > 60 ? todo.description.substring(0, 60) + '...' : todo.description)}
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div class="todo-status-indicator">
-                            <span class="todo-status-badge" style="background: ${
-                                todo.status === '완료' ? '#10b981' : 
-                                todo.status === '진행중' ? '#3b82f6' : '#f59e0b'
-                            }">
-                                ${todo.status}
-                            </span>
-                        </div>
+            // 할 일이 없는 경우 간단하게 처리
+            if (!dayTodos || dayTodos.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #a0aec0;">
+                        <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                        <p>이 날짜에는 할 일이 없습니다.</p>
                     </div>
                 `;
+                return;
+            }
+            
+            // 성능 최적화: DocumentFragment 사용으로 DOM 조작 최소화
+            const fragment = document.createDocumentFragment();
+            
+            // 상태 텍스트와 색상 미리 정의
+            const statusText = {
+                'pending': '대기중',
+                'in_progress': '진행중',
+                'completed': '완료'
             };
             
-            ComponentRenderer.renderList(container, dayTodos, dateModalTodoRenderer, {
-                emptyMessage: '이 날짜에는 할 일이 없습니다.',
-                emptyIcon: '📅'
+            const statusColor = {
+                'pending': '#f59e0b',
+                'in_progress': '#3b82f6',
+                'completed': '#10b981'
+            };
+            
+            // 할 일 목록 렌더링
+            dayTodos.forEach(todo => {
+                const project = projects.find(p => p.id === todo.project_id);
+                const todoElement = document.createElement('div');
+                todoElement.className = 'enhanced-date-todo-item';
+                
+                // 이벤트 리스너 위임으로 메모리 사용 개선
+                todoElement.dataset.todoId = todo.id;
+                
+                // 날짜 정보 구성 (포맷팅 최적화)
+                const dateInfo = [];
+                if (todo.start_date) {
+                    const startDate = new Date(todo.start_date);
+                    dateInfo.push(`시작: ${startDate.getMonth() + 1}/${startDate.getDate()}`);
+                }
+                if (todo.due_date) {
+                    const dueDate = new Date(todo.due_date);
+                    dateInfo.push(`마감: ${dueDate.getMonth() + 1}/${dueDate.getDate()}`);
+                }
+                
+                // 최적화된 HTML 템플릿 (불필요한 공백 제거 및 템플릿 간소화)
+                todoElement.innerHTML = `
+                    <div class="todo-color-indicator" style="background:${project?.color || '#6b7280'}"></div>
+                    <div class="todo-main-info">
+                        <div class="todo-title-enhanced">${todo.title}</div>
+                        <div class="todo-meta-info">
+                            <span class="todo-project-name" style="background:${project?.color}20;color:${project?.color || '#4a5568'}">${project?.name || '프로젝트 없음'}</span>
+                            ${dateInfo.length > 0 ? `<span class="todo-dates-info">${dateInfo.join(' • ')}</span>` : ''}
+                        </div>
+                        ${todo.description ? `<div class="todo-description-preview">${todo.description.length > 60 ? todo.description.substring(0, 60) + '...' : todo.description}</div>` : ''}
+                    </div>
+                    <div class="todo-status-indicator">
+                        <span class="todo-status-badge" style="background:${statusColor[todo.status]}">${statusText[todo.status]}</span>
+                    </div>
+                `;
+                
+                // DocumentFragment에 추가하여 성능 개선
+                fragment.appendChild(todoElement);
             });
+            
+            // 이벤트 위임으로 이벤트 리스너 등록 (개별 요소마다 등록하지 않음)
+            container.addEventListener('click', (e) => {
+                // 클릭된 할 일 요소 찾기
+                const todoItem = e.target.closest('.enhanced-date-todo-item');
+                if (todoItem && todoItem.dataset.todoId) {
                     showTodoDetailModal(todoItem.dataset.todoId);
                 }
             }, { once: false }); // 이벤트 리스너는 계속 유지
@@ -14372,40 +13836,55 @@
 
         }
         
-        // 댓글 렌더링 (ComponentRenderer 사용)
+        // 댓글 렌더링
         function renderComments(todoId) {
             const commentsList = document.getElementById('commentsList');
             const commentCountBadge = document.getElementById('commentCount');
-            
-            if (!commentsList || !commentCountBadge) {
-                console.warn('댓글 렌더링에 필요한 요소를 찾을 수 없습니다.');
-                return;
-            }
             
             const comments = todoComments.filter(comment => comment.todo_id === todoId)
                 .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
             
             commentCountBadge.textContent = comments.length;
+            commentsList.innerHTML = '';
             
-            // 개선된 댓글 카드 템플릿
-            const commentCardRenderer = (comment) => {
-                const isOwnComment = comment.author_id === currentUser.id;
+            if (comments.length === 0) {
+                commentsList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #a0aec0;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">💬</div>
+                        <p>아직 댓글이 없습니다.</p>
+                        <p>첫 번째 댓글을 작성해보세요!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            comments.forEach(comment => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment-item';
+                commentElement.dataset.commentId = comment.id;
                 
-                return ComponentRenderer.templates.comment(comment, {
-                    showActions: isOwnComment,
-                    currentUserId: currentUser.id
-                });
-            };
-            
-            ComponentRenderer.renderList(commentsList, comments, commentCardRenderer, {
-                emptyMessage: '아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!',
-                emptyIcon: '💬'
+                const isOwnComment = comment.author_id === currentUser.id;
+                const timeAgo = getTimeAgo(new Date(comment.created_at));
+                
+                commentElement.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">${escapeHTML(comment.author)}</span>
+                        <span class="comment-time">${timeAgo}</span>
+                    </div>
+                    <div class="comment-content" id="commentContent-${comment.id}">${escapeHTML(comment.content)}</div>
+                    ${isOwnComment ? `
+                        <div class="comment-actions">
+                            <button class="comment-action-btn" onclick="editComment('${comment.id}')">수정</button>
+                            <button class="comment-action-btn" onclick="deleteComment('${comment.id}')" style="color: #e53e3e;">삭제</button>
+                        </div>
+                    ` : ''}
+                `;
+                
+                commentsList.appendChild(commentElement);
             });
             
             // 스크롤을 맨 아래로
-            setTimeout(() => {
-                commentsList.scrollTop = commentsList.scrollHeight;
-            }, 100);
+            commentsList.scrollTop = commentsList.scrollHeight;
         }
         
         // 댓글 추가
@@ -14881,13 +14360,13 @@
             showNotification('프로젝트가 생성되었습니다!');
         }
         
-        // 프로젝트 목록 렌더링 (ComponentRenderer 사용)
+        // 프로젝트 목록 렌더링
         function renderProjects() {
             const projectFilter = document.getElementById('projectFilter');
             const todoProject = document.getElementById('todoProject');
             const projectsTabs = document.getElementById('projectsTabs');
             
-            // 필터 옵션 초기화
+            // 필터 옵션 업데이트
             if (projectFilter) {
                 projectFilter.innerHTML = '<option value="">모든 프로젝트</option>';
             }
@@ -14895,33 +14374,22 @@
                 todoProject.innerHTML = '<option value="">프로젝트 선택</option>';
             }
             
-            const workspaceProjects = projects.filter(p => p.workspace_id === currentWorkspace?.id);
-            
-            // 프로젝트 탭 렌더링
+            // 프로젝트 탭 영역 업데이트
             if (projectsTabs) {
-                // 전체 탭 템플릿
-                const allTabTemplate = `
-                    <div class="project-tab project-tab-all ${!currentProject ? 'active' : ''}" 
-                         onclick="selectProjectTab(null)">
-                        📁 전체 프로젝트
-                    </div>
-                `;
+                projectsTabs.innerHTML = '';
                 
-                // 개별 프로젝트 탭 템플릿
-                const projectTabRenderer = (project) => `
-                    <div class="project-tab ${currentProject?.id === project.id ? 'active' : ''}" 
-                         onclick="selectProjectTab('${project.id}')" data-project-id="${project.id}">
-                        <div class="project-color" style="background: ${project.color}"></div>
-                        ${escapeHTML(project.name)}
-                    </div>
-                `;
-                
-                const projectTabsHtml = allTabTemplate + workspaceProjects.map(projectTabRenderer).join('');
-                ComponentRenderer.render(projectsTabs, projectTabsHtml);
+                // "전체" 탭 추가
+                const allTab = document.createElement('div');
+                allTab.className = `project-tab project-tab-all ${!currentProject ? 'active' : ''}`;
+                allTab.onclick = () => selectProjectTab(null);
+                allTab.innerHTML = '📁 전체 프로젝트';
+                projectsTabs.appendChild(allTab);
             }
             
-            // 필터 옵션 추가
+            const workspaceProjects = projects.filter(p => p.workspace_id === currentWorkspace?.id);
+            
             workspaceProjects.forEach(project => {
+                // 필터 옵션 추가
                 if (projectFilter) {
                     const filterOption = document.createElement('option');
                     filterOption.value = project.id;
@@ -14934,6 +14402,18 @@
                     todoOption.value = project.id;
                     todoOption.textContent = escapeHTML(project.name);
                     todoProject.appendChild(todoOption);
+                }
+                
+                // 프로젝트 탭 추가
+                if (projectsTabs) {
+                    const projectTab = document.createElement('div');
+                    projectTab.className = `project-tab ${currentProject?.id === project.id ? 'active' : ''}`;
+                    projectTab.onclick = () => selectProjectTab(project.id);
+                    projectTab.innerHTML = `
+                        <div class="project-color" style="background: ${project.color}"></div>
+                        ${escapeHTML(project.name)}
+                    `;
+                    projectsTabs.appendChild(projectTab);
                 }
             });
         }
@@ -15138,14 +14618,17 @@
             showNotification('할 일이 추가되었습니다!');
         }
         
-        // 향상된 할 일 렌더링 (ComponentRenderer 사용)
+        // 향상된 할 일 렌더링 (달력 팝업과 동일한 스타일)
         function renderTodos() {
             const container = document.getElementById('todoList');
             
+            // DOM 요소 존재 확인
             if (!container) {
                 console.warn('todoList 요소를 찾을 수 없습니다.');
                 return;
             }
+            
+            container.innerHTML = '';
             
             let filteredTodos = todos.filter(todo => todo.workspace_id === currentWorkspace?.id);
             
@@ -15155,35 +14638,78 @@
             }
             
             // 상태별 정렬 (진행중 > 대기중 > 완료)
-            const statusOrder = { 'in_progress': 0, 'pending': 1, 'completed': 2 };
-            filteredTodos = ComponentRenderer.applySorting(filteredTodos, 'status', 'asc', (todo) => statusOrder[todo.status]);
+            filteredTodos.sort((a, b) => {
+                const statusOrder = { 'in_progress': 0, 'pending': 1, 'completed': 2 };
+                return statusOrder[a.status] - statusOrder[b.status];
+            });
             
-            // 할 일 카드 렌더링 함수
-            const todoCardRenderer = (todo) => {
+            if (filteredTodos.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #a0aec0;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
+                        <p>아직 할 일이 없습니다.</p>
+                        <p>새 프로젝트를 만들고 할 일을 추가해보세요!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredTodos.forEach(todo => {
                 const project = projects.find(p => p.id === todo.project_id);
+                const todoElement = document.createElement('div');
+                todoElement.className = 'enhanced-date-todo-item';
+                todoElement.onclick = () => showTodoDetailModal(todo.id);
                 
-                // 댓글 수 추가
-                todo.comments = todoComments.filter(comment => comment.todo_id === todo.id);
-                
-                // 상태 텍스트 매핑
-                const statusMapping = {
+                const statusText = {
                     'pending': '대기중',
-                    'in_progress': '진행중', 
+                    'in_progress': '진행중',
                     'completed': '완료'
                 };
-                todo.status = statusMapping[todo.status] || todo.status;
                 
-                return ComponentRenderer.templates.todoCard(todo, project, {
-                    showProject: true,
-                    showComments: true,
-                    showActions: true,
-                    compact: false
-                });
-            };
-            
-            ComponentRenderer.renderList(container, filteredTodos, todoCardRenderer, {
-                emptyMessage: '아직 할 일이 없습니다. 새 프로젝트를 만들고 할 일을 추가해보세요!',
-                emptyIcon: '📝'
+                const statusColor = {
+                    'pending': '#f59e0b',
+                    'in_progress': '#3b82f6',
+                    'completed': '#10b981'
+                };
+                
+                // 날짜 정보 구성
+                const dateInfo = [];
+                if (todo.start_date) {
+                    dateInfo.push(`시작: ${new Date(todo.start_date).toLocaleDateString()}`);
+                }
+                if (todo.due_date) {
+                    dateInfo.push(`마감: ${new Date(todo.due_date).toLocaleDateString()}`);
+                }
+                
+                // 댓글 수 계산
+                const commentCount = getCommentCount(todo.id);
+                
+                todoElement.innerHTML = `
+                    <div class="todo-color-indicator" style="background: ${project?.color || '#6b7280'}"></div>
+                    <div class="todo-main-info">
+                        <div class="todo-title-enhanced">${escapeHTML(todo.title)}</div>
+                        <div class="todo-meta-info">
+                            <span class="todo-project-name" style="background: ${project?.color}20; color: ${project?.color || '#4a5568'}">
+                                ${escapeHTML(project?.name || '프로젝트 없음')}
+                            </span>
+                            ${dateInfo.length > 0 ? `<span class="todo-dates-info">${dateInfo.join(' • ')}</span>` : ''}
+                            ${commentCount > 0 ? `<span class="comment-count">💬 ${commentCount}</span>` : ''}
+                        </div>
+                        ${todo.description ? `
+                            <div class="todo-description-preview">
+                                ${escapeHTML(todo.description.length > 80 ? todo.description.substring(0, 80) + '...' : todo.description)}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="todo-status-indicator">
+                        <span class="todo-status-badge" style="background: ${statusColor[todo.status]}">
+                            ${statusText[todo.status]}
+                        </span>
+                        <span style="color: #a0aec0; font-size: 12px;">클릭하여 상세보기</span>
+                    </div>
+                `;
+                
+                container.appendChild(todoElement);
             });
             
             // 통계 업데이트
