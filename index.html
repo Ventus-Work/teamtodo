@@ -46,6 +46,117 @@
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
         }
+
+        /* Todo 항목 고급 스타일 */
+        .todo-item {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .todo-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-left-color: #667eea;
+        }
+        
+        .todo-item.completed {
+            opacity: 0.7;
+            background-color: #f9fafb;
+        }
+        
+        /* 우선순위 표시 */
+        .priority-high { border-left-color: #ef4444 !important; }
+        .priority-medium { border-left-color: #f59e0b !important; }
+        .priority-low { border-left-color: #10b981 !important; }
+        
+        /* 활동 피드 스타일 */
+        .activity-item {
+            transition: background-color 0.2s ease;
+        }
+        
+        .activity-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        /* 버튼 애니메이션 */
+        .btn-animate {
+            transition: all 0.2s ease;
+        }
+        
+        .btn-animate:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* 통계 카드 애니메이션 */
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+        
+        /* 필터 버튼 활성화 스타일 */
+        .filter-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .filter-btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        /* 마이그레이션 상태 애니메이션 */
+        .migration-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* 반응형 개선 */
+        @media (max-width: 768px) {
+            .todo-item {
+                padding: 1rem;
+            }
+            
+            .todo-item .flex {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .todo-actions {
+                display: flex;
+                gap: 0.5rem;
+                width: 100%;
+            }
+            
+            .todo-actions button {
+                flex: 1;
+            }
+        }
+        
+        /* 스크롤바 스타일링 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
         .status-indicator {
             width: 8px;
             height: 8px;
@@ -426,14 +537,93 @@
                 </div>
             </div>
 
-            <!-- 할 일 목록 -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">할 일 목록</h2>
-                <div id="todoList" class="space-y-3">
-                    <!-- 할 일 항목들이 여기에 동적으로 추가됩니다 -->
+            <!-- 할 일 목록 및 관리 섹션 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- 메인 할 일 섹션 -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-lg font-semibold text-gray-900">📋 할 일 목록</h2>
+                            <div class="flex space-x-2">
+                                <button onclick="todoManager.clearCompleted()" class="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200 transition-colors btn-animate">
+                                    🗑️ 완료 항목 정리
+                                </button>
+                                <button onclick="todoManager.addSampleTodos()" class="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200 transition-colors btn-animate">
+                                    📝 샘플 추가
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 할 일 필터 -->
+                        <div class="mb-4 flex space-x-2">
+                            <button onclick="todoManager.setFilter('all')" class="filter-btn bg-blue-100 text-blue-800 px-3 py-1 text-sm rounded-md" data-filter="all">전체</button>
+                            <button onclick="todoManager.setFilter('pending')" class="filter-btn bg-gray-100 text-gray-800 px-3 py-1 text-sm rounded-md hover:bg-gray-200" data-filter="pending">진행 중</button>
+                            <button onclick="todoManager.setFilter('completed')" class="filter-btn bg-gray-100 text-gray-800 px-3 py-1 text-sm rounded-md hover:bg-gray-200" data-filter="completed">완료</button>
+                            <button onclick="todoManager.setFilter('high')" class="filter-btn bg-gray-100 text-gray-800 px-3 py-1 text-sm rounded-md hover:bg-gray-200" data-filter="high">높은 우선순위</button>
+                        </div>
+
+                        <!-- 할 일 목록 -->
+                        <div id="todoList" class="space-y-3 min-h-[300px]">
+                            <!-- 할 일 항목들이 여기에 동적으로 추가됩니다 -->
+                            <div id="emptyState" class="text-center text-gray-500 py-8">
+                                <div class="text-4xl mb-2">📝</div>
+                                <p>아직 할 일이 없습니다.</p>
+                                <p class="text-sm">위에서 새로운 할 일을 추가해보세요!</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="emptyState" class="text-center py-8 text-gray-500">
-                    아직 등록된 할 일이 없습니다. 새로운 할 일을 추가해보세요!
+
+                <!-- 사이드바 -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- 통계 카드 -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 할 일 현황</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="text-center p-3 bg-blue-50 rounded-lg stat-card">
+                                <div id="totalCount" class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-blue-600">전체</div>
+                            </div>
+                            <div class="text-center p-3 bg-green-50 rounded-lg stat-card">
+                                <div id="completedCount" class="text-2xl font-bold text-green-600">0</div>
+                                <div class="text-sm text-green-600">완료</div>
+                            </div>
+                        </div>
+                        <div class="text-center p-3 bg-purple-50 rounded-lg stat-card">
+                            <div id="completionRate" class="text-2xl font-bold text-purple-600">0%</div>
+                            <div class="text-sm text-purple-600">완료율</div>
+                        </div>
+                    </div>
+
+                    <!-- 최근 활동 -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">🔔 최근 활동</h3>
+                        <div id="activityFeed" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                            <div class="text-center text-gray-500 py-4">
+                                <div class="text-2xl mb-2">📝</div>
+                                <p class="text-sm">활동이 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 데이터 마이그레이션 -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">🔄 데이터 동기화</h3>
+                        <div class="space-y-3">
+                            <button onclick="migrationManager.exportToSupabase()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm btn-animate">
+                                ⬆️ Supabase로 업로드
+                            </button>
+                            <button onclick="migrationManager.importFromSupabase()" class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm btn-animate">
+                                ⬇️ Supabase에서 가져오기
+                            </button>
+                            <button onclick="migrationManager.exportToFile()" class="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm btn-animate">
+                                💾 파일로 내보내기
+                            </button>
+                        </div>
+                        <div id="migrationStatus" class="mt-3 text-sm text-gray-600">
+                            <!-- 마이그레이션 상태 표시 -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -1180,6 +1370,478 @@
             }
         }
 
+        // 할 일 관리 시스템
+        class TodoManager {
+            constructor() {
+                this.todos = [];
+                this.activities = [];
+                this.currentFilter = 'all';
+                this.nextId = 1;
+            }
+
+            // 로컬 스토리지에서 할 일 로드
+            loadFromStorage() {
+                try {
+                    const savedTodos = localStorage.getItem('teamtodo_todos');
+                    const savedActivities = localStorage.getItem('teamtodo_activities');
+                    const savedNextId = localStorage.getItem('teamtodo_nextId');
+
+                    if (savedTodos) {
+                        this.todos = JSON.parse(savedTodos);
+                    }
+                    if (savedActivities) {
+                        this.activities = JSON.parse(savedActivities);
+                    }
+                    if (savedNextId) {
+                        this.nextId = parseInt(savedNextId);
+                    }
+                    this.renderAll();
+                } catch (error) {
+                    console.error('할 일 로드 실패:', error);
+                }
+            }
+
+            // 로컬 스토리지에 할 일 저장
+            saveToStorage() {
+                try {
+                    localStorage.setItem('teamtodo_todos', JSON.stringify(this.todos));
+                    localStorage.setItem('teamtodo_activities', JSON.stringify(this.activities));
+                    localStorage.setItem('teamtodo_nextId', this.nextId.toString());
+                } catch (error) {
+                    console.error('할 일 저장 실패:', error);
+                }
+            }
+
+            // 할 일 추가
+            addTodo(title, description, priority, startDate, dueDate) {
+                const todo = {
+                    id: this.nextId++,
+                    title: title.trim(),
+                    description: description ? description.trim() : '',
+                    priority: priority || 'medium',
+                    startDate: startDate || null,
+                    dueDate: dueDate || null,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                this.todos.unshift(todo);
+                this.addActivity(`"${todo.title}" 추가됨`);
+                this.saveToStorage();
+                this.renderAll();
+                return todo;
+            }
+
+            // 할 일 토글
+            toggleTodo(id) {
+                const todo = this.todos.find(t => t.id === id);
+                if (todo) {
+                    todo.completed = !todo.completed;
+                    todo.updatedAt = new Date().toISOString();
+                    this.addActivity(`"${todo.title}" ${todo.completed ? '완료' : '재시작'}됨`);
+                    this.saveToStorage();
+                    this.renderAll();
+                }
+            }
+
+            // 할 일 수정
+            editTodo(id, newTitle) {
+                const todo = this.todos.find(t => t.id === id);
+                if (todo && newTitle.trim()) {
+                    const oldTitle = todo.title;
+                    todo.title = newTitle.trim();
+                    todo.updatedAt = new Date().toISOString();
+                    this.addActivity(`"${oldTitle}" → "${todo.title}" 수정됨`);
+                    this.saveToStorage();
+                    this.renderAll();
+                }
+            }
+
+            // 할 일 삭제
+            deleteTodo(id) {
+                const todo = this.todos.find(t => t.id === id);
+                if (todo && confirm(`"${todo.title}"을(를) 삭제하시겠습니까?`)) {
+                    this.todos = this.todos.filter(t => t.id !== id);
+                    this.addActivity(`"${todo.title}" 삭제됨`);
+                    this.saveToStorage();
+                    this.renderAll();
+                }
+            }
+
+            // 필터 설정
+            setFilter(filter) {
+                this.currentFilter = filter;
+                // 필터 버튼 스타일 업데이트
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.className = 'filter-btn bg-gray-100 text-gray-800 px-3 py-1 text-sm rounded-md hover:bg-gray-200';
+                });
+                document.querySelector(`[data-filter="${filter}"]`).className = 'filter-btn bg-blue-100 text-blue-800 px-3 py-1 text-sm rounded-md';
+                this.renderTodos();
+            }
+
+            // 완료된 할 일 정리
+            clearCompleted() {
+                const completedCount = this.todos.filter(t => t.completed).length;
+                if (completedCount === 0) {
+                    alert('완료된 할 일이 없습니다.');
+                    return;
+                }
+                
+                if (confirm(`완료된 할 일 ${completedCount}개를 삭제하시겠습니까?`)) {
+                    this.todos = this.todos.filter(t => !t.completed);
+                    this.addActivity(`완료된 할 일 ${completedCount}개 정리됨`);
+                    this.saveToStorage();
+                    this.renderAll();
+                }
+            }
+
+            // 샘플 할 일 추가
+            addSampleTodos() {
+                const samples = [
+                    { title: '프로젝트 계획서 작성', priority: 'high', description: '새로운 프로젝트의 계획서를 작성합니다.' },
+                    { title: '회의 준비', priority: 'medium', description: '내일 있을 팀 회의를 위한 자료 준비' },
+                    { title: '이메일 확인', priority: 'low', description: '밀린 이메일들을 확인하고 답장하기' },
+                    { title: '운동하기', priority: 'medium', description: '30분 이상 운동하기' },
+                    { title: '독서', priority: 'low', description: '새로 산 책 읽기' }
+                ];
+
+                samples.forEach(sample => {
+                    this.addTodo(sample.title, sample.description, sample.priority);
+                });
+            }
+
+            // 활동 추가
+            addActivity(text) {
+                const activity = {
+                    id: Date.now(),
+                    text: text,
+                    time: new Date().toLocaleString('ko-KR')
+                };
+                
+                this.activities.unshift(activity);
+                // 최대 20개 활동만 유지
+                if (this.activities.length > 20) {
+                    this.activities = this.activities.slice(0, 20);
+                }
+            }
+
+            // 필터링된 할 일 목록 가져오기
+            getFilteredTodos() {
+                switch (this.currentFilter) {
+                    case 'completed':
+                        return this.todos.filter(t => t.completed);
+                    case 'pending':
+                        return this.todos.filter(t => !t.completed);
+                    case 'high':
+                        return this.todos.filter(t => t.priority === 'high');
+                    default:
+                        return this.todos;
+                }
+            }
+
+            // 우선순위 텍스트 변환
+            getPriorityText(priority) {
+                switch (priority) {
+                    case 'high': return '높음';
+                    case 'medium': return '보통';
+                    case 'low': return '낮음';
+                    default: return priority;
+                }
+            }
+
+            // 우선순위 색상 클래스
+            getPriorityColor(priority) {
+                switch (priority) {
+                    case 'high': return 'bg-red-100 text-red-800';
+                    case 'medium': return 'bg-yellow-100 text-yellow-800';
+                    case 'low': return 'bg-green-100 text-green-800';
+                    default: return 'bg-gray-100 text-gray-800';
+                }
+            }
+
+            // 모든 UI 렌더링
+            renderAll() {
+                this.renderTodos();
+                this.renderStats();
+                this.renderActivities();
+            }
+
+            // 할 일 목록 렌더링
+            renderTodos() {
+                const todoList = document.getElementById('todoList');
+                const emptyState = document.getElementById('emptyState');
+                const filteredTodos = this.getFilteredTodos();
+
+                if (filteredTodos.length === 0) {
+                    if (emptyState) emptyState.style.display = 'block';
+                    todoList.innerHTML = '';
+                    return;
+                }
+
+                if (emptyState) emptyState.style.display = 'none';
+
+                todoList.innerHTML = filteredTodos.map(todo => `
+                    <div class="todo-item flex items-center p-4 border border-gray-200 rounded-lg priority-${todo.priority} ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
+                        <input 
+                            type="checkbox" 
+                            class="mr-4 w-5 h-5 text-blue-600 rounded" 
+                            ${todo.completed ? 'checked' : ''} 
+                            onchange="todoManager.toggleTodo(${todo.id})"
+                        >
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="todo-text font-medium text-gray-900">${todo.title}</h3>
+                                <span class="px-2 py-1 text-xs rounded-full ${this.getPriorityColor(todo.priority)}">
+                                    ${this.getPriorityText(todo.priority)}
+                                </span>
+                            </div>
+                            ${todo.description ? `<p class="text-sm text-gray-600">${todo.description}</p>` : ''}
+                            ${todo.dueDate ? `<p class="text-xs text-gray-500 mt-1">📅 ${todo.dueDate}</p>` : ''}
+                            <div class="text-xs text-gray-400 mt-1">
+                                생성: ${new Date(todo.createdAt).toLocaleString('ko-KR')}
+                            </div>
+                        </div>
+                        <div class="todo-actions flex space-x-2">
+                            <button 
+                                onclick="todoManager.startEdit(${todo.id})" 
+                                class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors btn-animate"
+                            >
+                                수정
+                            </button>
+                            <button 
+                                onclick="todoManager.deleteTodo(${todo.id})" 
+                                class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors btn-animate"
+                            >
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 통계 렌더링
+            renderStats() {
+                const total = this.todos.length;
+                const completed = this.todos.filter(t => t.completed).length;
+                const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+                document.getElementById('totalCount').textContent = total;
+                document.getElementById('completedCount').textContent = completed;
+                document.getElementById('completionRate').textContent = rate + '%';
+            }
+
+            // 활동 피드 렌더링
+            renderActivities() {
+                const activityFeed = document.getElementById('activityFeed');
+                
+                if (this.activities.length === 0) {
+                    activityFeed.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            <div class="text-2xl mb-2">📝</div>
+                            <p class="text-sm">활동이 없습니다.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                activityFeed.innerHTML = this.activities.map(activity => `
+                    <div class="activity-item flex items-start space-x-2 p-2 rounded">
+                        <div class="text-blue-500 mt-1">📝</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-gray-900">${activity.text}</p>
+                            <p class="text-xs text-gray-500">${activity.time}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 할 일 수정 시작
+            startEdit(id) {
+                const todo = this.todos.find(t => t.id === id);
+                if (!todo) return;
+
+                const newTitle = prompt('새로운 제목을 입력하세요:', todo.title);
+                if (newTitle !== null && newTitle.trim() !== todo.title) {
+                    this.editTodo(id, newTitle);
+                }
+            }
+        }
+
+        // 데이터 마이그레이션 관리 시스템
+        class MigrationManager {
+            constructor(todoManager) {
+                this.todoManager = todoManager;
+                this.statusElement = document.getElementById('migrationStatus');
+            }
+
+            // 상태 메시지 업데이트
+            updateStatus(message, type = 'info') {
+                if (this.statusElement) {
+                    const colors = {
+                        info: 'text-blue-600',
+                        success: 'text-green-600',
+                        error: 'text-red-600',
+                        warning: 'text-yellow-600'
+                    };
+                    this.statusElement.className = `mt-3 text-sm ${colors[type] || colors.info}`;
+                    this.statusElement.textContent = message;
+                }
+            }
+
+            // Supabase로 데이터 내보내기
+            async exportToSupabase() {
+                if (!isSupabaseConnected) {
+                    this.updateStatus('Supabase에 연결되지 않았습니다.', 'error');
+                    return;
+                }
+
+                if (!uiController.currentUser) {
+                    this.updateStatus('로그인이 필요합니다.', 'error');
+                    return;
+                }
+
+                try {
+                    this.updateStatus('Supabase로 업로드 중...', 'info');
+                    
+                    const todos = this.todoManager.todos.map(todo => ({
+                        id: todo.id,
+                        user_id: uiController.currentUser.id,
+                        title: todo.title,
+                        description: todo.description || null,
+                        priority: todo.priority,
+                        start_date: todo.startDate || null,
+                        due_date: todo.dueDate || null,
+                        completed: todo.completed,
+                        created_at: todo.createdAt,
+                        updated_at: todo.updatedAt
+                    }));
+
+                    // 기존 데이터 삭제 후 새로 삽입
+                    const { error: deleteError } = await supabase
+                        .from('todos')
+                        .delete()
+                        .eq('user_id', uiController.currentUser.id);
+
+                    if (deleteError) throw deleteError;
+
+                    if (todos.length > 0) {
+                        const { error: insertError } = await supabase
+                            .from('todos')
+                            .insert(todos);
+
+                        if (insertError) throw insertError;
+                    }
+
+                    this.updateStatus(`${todos.length}개 할 일이 Supabase로 업로드되었습니다.`, 'success');
+                    this.todoManager.addActivity(`${todos.length}개 할 일이 클라우드에 백업됨`);
+                    this.todoManager.renderActivities();
+
+                } catch (error) {
+                    console.error('Supabase 업로드 실패:', error);
+                    this.updateStatus('업로드에 실패했습니다: ' + error.message, 'error');
+                }
+            }
+
+            // Supabase에서 데이터 가져오기
+            async importFromSupabase() {
+                if (!isSupabaseConnected) {
+                    this.updateStatus('Supabase에 연결되지 않았습니다.', 'error');
+                    return;
+                }
+
+                if (!uiController.currentUser) {
+                    this.updateStatus('로그인이 필요합니다.', 'error');
+                    return;
+                }
+
+                try {
+                    this.updateStatus('Supabase에서 가져오는 중...', 'info');
+
+                    const { data, error } = await supabase
+                        .from('todos')
+                        .select('*')
+                        .eq('user_id', uiController.currentUser.id)
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        // 로컬 데이터 백업
+                        const currentTodos = [...this.todoManager.todos];
+                        
+                        // 서버 데이터로 교체
+                        this.todoManager.todos = data.map(todo => ({
+                            id: todo.id,
+                            title: todo.title,
+                            description: todo.description || '',
+                            priority: todo.priority,
+                            startDate: todo.start_date,
+                            dueDate: todo.due_date,
+                            completed: todo.completed,
+                            createdAt: todo.created_at,
+                            updatedAt: todo.updated_at
+                        }));
+
+                        // nextId 업데이트
+                        this.todoManager.nextId = Math.max(...this.todoManager.todos.map(t => t.id), 0) + 1;
+
+                        this.todoManager.saveToStorage();
+                        this.todoManager.renderAll();
+
+                        this.updateStatus(`${data.length}개 할 일을 가져왔습니다.`, 'success');
+                        this.todoManager.addActivity(`${data.length}개 할 일이 클라우드에서 동기화됨`);
+                        this.todoManager.renderActivities();
+                    } else {
+                        this.updateStatus('가져올 데이터가 없습니다.', 'warning');
+                    }
+
+                } catch (error) {
+                    console.error('Supabase 가져오기 실패:', error);
+                    this.updateStatus('가져오기에 실패했습니다: ' + error.message, 'error');
+                }
+            }
+
+            // 파일로 내보내기
+            exportToFile() {
+                try {
+                    const exportData = {
+                        todos: this.todoManager.todos,
+                        activities: this.todoManager.activities,
+                        exported_at: new Date().toISOString(),
+                        version: '1.0'
+                    };
+
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                    
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(dataBlob);
+                    link.download = `teamtodo-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+
+                    this.updateStatus('파일로 내보내기가 완료되었습니다.', 'success');
+                    this.todoManager.addActivity('할 일 목록이 파일로 내보내짐');
+                    this.todoManager.renderActivities();
+
+                } catch (error) {
+                    console.error('파일 내보내기 실패:', error);
+                    this.updateStatus('파일 내보내기에 실패했습니다.', 'error');
+                }
+            }
+
+            // 자동 동기화 (주기적으로 실행)
+            async autoSync() {
+                if (isSupabaseConnected && uiController.currentUser) {
+                    try {
+                        await this.exportToSupabase();
+                    } catch (error) {
+                        console.error('자동 동기화 실패:', error);
+                    }
+                }
+            }
+        }
+
         // UI 컨트롤러 (Google OAuth 통합)
         class UIController {
             constructor() {
@@ -1698,96 +2360,59 @@
                 }
             }
 
-            // 할 일 추가 처리 (연결 상태에 따라 분기)
+            // 할 일 추가 처리
             async handleTodoSubmit(e) {
                 e.preventDefault();
                 if (!this.isTodoFormValid()) return;
 
-                const title = document.getElementById('todoTitle').value;
-                const description = document.getElementById('todoDescription').value;
+                const title = document.getElementById('todoTitle').value.trim();
+                const description = document.getElementById('todoDescription').value.trim();
                 const priority = document.getElementById('todoPriority').value;
-                const startDate = document.getElementById('todoStartDate').value || null;
-                const dueDate = document.getElementById('todoDueDate').value || null;
+                const startDate = document.getElementById('todoStartDate').value;
+                const dueDate = document.getElementById('todoDueDate').value;
                 const submitBtn = document.getElementById('todoSubmitBtn');
 
                 submitBtn.disabled = true;
                 submitBtn.textContent = '추가 중...';
 
                 try {
-                    if (!isSupabaseConnected) {
-                        // 데모 모드: 로컬 저장소에 저장
-                        const newTodo = {
-                            id: Date.now().toString(),
-                            title,
-                            description,
-                            priority,
-                            start_date: startDate,
-                            due_date: dueDate,
-                            status: 'pending',
-                            created_at: new Date().toISOString(),
-                            creator: { full_name: '데모 사용자' }
-                        };
-                        
-                        this.todos.unshift(newTodo);
-                        localStorage.setItem('demo_todos', JSON.stringify(this.todos));
-                    } else {
-                        const { data, error } = await supabase
-                            .from('todos')
-                            .insert({
-                                title: title,
-                                description: description,
-                                priority: priority,
-                                start_date: startDate,
-                                due_date: dueDate,
-                                created_by: this.currentUser.id,
-                                status: 'pending'
-                            })
-                            .select();
-
-                        if (error) throw error;
-                    }
-
+                    // TodoManager를 통해 할 일 추가
+                    todoManager.addTodo(title, description, priority, startDate, dueDate);
+                    
                     // 폼 초기화
                     document.getElementById('todoForm').reset();
                     this.hideValidationMessage('todoTitleSuccess');
                     this.updateSubmitButtonState();
 
-                    // 할 일 목록 새로고침
-                    this.loadTodos();
+                    // 검증 시스템에 성공 기록
+                    validationSystem.recordValidation('todo', 'success');
 
-                    alert('할 일이 성공적으로 추가되었습니다!');
+                    // 자동 동기화 (Supabase 연결 시)
+                    if (isSupabaseConnected && this.currentUser) {
+                        setTimeout(() => {
+                            migrationManager.autoSync();
+                        }, 2000);
+                    }
+
                 } catch (error) {
                     console.error('할 일 추가 실패:', error);
-                    alert('할 일 추가 중 오류가 발생했습니다: ' + error.message);
+                    validationSystem.recordValidation('todo', 'failed');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = '할 일 추가';
                 }
             }
 
-            // 할 일 목록 로드 (연결 상태에 따라 분기)
+            // 할 일 목록 로드
             async loadTodos() {
                 try {
-                    if (!isSupabaseConnected) {
-                        // 데모 모드: 로컬 저장소에서 로드
-                        const savedTodos = localStorage.getItem('demo_todos');
-                        this.todos = savedTodos ? JSON.parse(savedTodos) : [];
-                    } else {
-                        const { data, error } = await supabase
-                            .from('todos')
-                            .select(`
-                                *,
-                                assigned_user:users!todos_assigned_to_fkey(full_name),
-                                creator:users!todos_created_by_fkey(full_name)
-                            `)
-                            .eq('created_by', this.currentUser.id)
-                            .order('created_at', { ascending: false });
-
-                        if (error) throw error;
-                        this.todos = data;
+                    // TodoManager를 통해 로드
+                    todoManager.loadFromStorage();
+                    
+                    // Supabase 연결 시 서버에서 데이터 가져오기
+                    if (isSupabaseConnected && this.currentUser) {
+                        await migrationManager.importFromSupabase();
                     }
-
-                    this.renderTodos();
                 } catch (error) {
                     console.error('할 일 로드 실패:', error);
                 }
@@ -1963,11 +2588,19 @@
         // 전역 변수 선언
         let validationSystem = null;
         let uiController = null;
+        let todoManager = null;
+        let migrationManager = null;
 
         // 페이지 로드 시 시스템 초기화
         document.addEventListener('DOMContentLoaded', async () => {
+            // 할 일 관리자 초기화
+            todoManager = new TodoManager();
+            
             // UI 컨트롤러 초기화
             uiController = new UIController();
+            
+            // 마이그레이션 관리자 초기화
+            migrationManager = new MigrationManager(todoManager);
             
             // 시스템 초기화 시작
             const initializer = new SystemInitializer();
