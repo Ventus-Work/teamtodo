@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "teamtodo",
   "builds": [
     {
       "src": "index.html",
@@ -10,13 +9,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/$1"
     }
-  ],
-  "env": {},
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  }
+  ]
 }
