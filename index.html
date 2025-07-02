@@ -6719,6 +6719,21 @@
                 
                 onAuthStateChange(callback) {
                     return APIManager.client.auth.onAuthStateChange(callback);
+                },
+
+                async getUser() {
+                    return APIManager.client.auth.getUser();
+                },
+
+                async setSession(accessToken, refreshToken) {
+                    return APIManager.client.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken
+                    });
+                },
+
+                async refreshSession() {
+                    return APIManager.client.auth.refreshSession();
                 }
             },
             
@@ -6806,22 +6821,26 @@
             // 연결 상태 확인 및 재연결
             checkConnection: async function() {
                 try {
-                    if (!this.client) return false;
-                    
-                    // 간단한 요청으로 연결 상태 확인
-                    const { error } = await this.client.from('health_check').select('count').limit(1);
-                    
-                    if (error && (error.code === 'JWT_INVALID' || error.code === 'PGRST116' || error.status === 401)) {
-                        console.warn('Supabase 세션이 만료되었거나 연결 문제가 발생했습니다. 재연결 시도 중...');
-                        this.client = this.createClient();
-                        return this.client !== null;
+                    if (!this.client) {
+                        console.log('Supabase 클라이언트가 없습니다. 재초기화 시도...');
+                        return this.initialize();
                     }
+                    
+                    // 현재 세션 확인으로 연결 상태 체크
+                    const { data: session, error } = await this.client.auth.getSession();
+                    
+                    if (error && error.status === 400) {
+                        console.warn('Supabase 세션 확인 중 오류:', error.message);
+                        // 세션 오류는 일반적이므로 true 반환 (연결은 정상)
+                        return true;
+                    }
+                    
+                    console.log('Supabase 연결 상태 정상');
                     return true;
                 } catch (error) {
                     console.error('Supabase 연결 확인 오류:', error);
-                    // 오류 발생 시 재연결 시도
-                    this.client = this.createClient();
-                    return this.client !== null;
+                    // 오류 발생 시 재초기화 시도
+                    return this.initialize();
                 }
             },
             
@@ -7127,6 +7146,10 @@
                     // 데이터베이스에 사용자 정보 저장/업데이트
                     await ensureUserInDatabase(authUser.user);
                     
+                    // 현재 사용자 정보 설정
+                    currentUser = authUser.user;
+                    console.log('현재 사용자 설정됨:', currentUser.email);
+                    
                     // 대시보드로 이동
                     UIManager.showScreen('app');
                     return true;
@@ -7137,6 +7160,11 @@
                 if (authUser && !error) {
                     console.log('기존 로그인 세션 발견됨');
                     await ensureUserInDatabase(authUser.user);
+                    
+                    // 현재 사용자 정보 설정
+                    currentUser = authUser.user;
+                    console.log('현재 사용자 설정됨:', currentUser.email);
+                    
                     UIManager.showScreen('app');
                     return true;
                 }
@@ -7242,12 +7270,20 @@
             debugLog('DOMContentLoaded 이벤트 발생');
             initializeSafetyVariables();
             
-            // OAuth 콜백 처리 (페이지 로드 시)
-            const authHandled = await handleAuthCallback();
+            // Supabase 초기화
+            console.log('Supabase 초기화 중...');
+            const supabaseInitialized = SupabaseManager.initialize();
             
-            // 인증이 처리되지 않았다면 랜딩페이지 유지
-            if (!authHandled) {
-                console.log('인증되지 않은 사용자 - 랜딩페이지 표시');
+            if (supabaseInitialized) {
+                // OAuth 콜백 처리 (페이지 로드 시)
+                const authHandled = await handleAuthCallback();
+                
+                // 인증이 처리되지 않았다면 랜딩페이지 유지
+                if (!authHandled) {
+                    console.log('인증되지 않은 사용자 - 랜딩페이지 표시');
+                }
+            } else {
+                console.log('Supabase 초기화 실패 - 데모 모드로 실행');
             }
             
             // 편집 모달 날짜 선택기 초기화
@@ -7260,32 +7296,9 @@
                 minDate: "today"
             });
             
-            // 오류 발생 시 재시도 메커니즘
-            let initRetries = 3;
-            
-            // OAuth 콜백 처리 및 URL 파라미터 확인
+            // URL 파라미터 확인 (정식 모드 설정)
             const urlParams = new URLSearchParams(window.location.search);
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            
-            // OAuth 콜백인지 확인 (access_token이나 code가 있는 경우)
-            const isOAuthCallback = urlParams.has('code') || hashParams.has('access_token') || urlParams.has('access_token') || 
-                                  hashParams.has('access_token') || urlParams.has('error');
-            
-            if (isOAuthCallback) {
-                console.log('OAuth 콜백 감지됨, 전용 처리 시작...');
-                isDemoMode = false; // OAuth 로그인은 항상 정식 모드
-                
-                // 콜백 오류 확인
-                if (urlParams.has('error')) {
-                    console.error('OAuth 오류:', urlParams.get('error'), urlParams.get('error_description'));
-                    showNotification('로그인 중 오류가 발생했습니다: ' + urlParams.get('error_description'), 'error');
-                    return; // 오류 시 더 이상 진행하지 않음
-                }
-                
-                // OAuth 콜백 전용 처리
-                handleOAuthCallback();
-                return; // 일반 초기화 로직 건너뛰기
-            } else if (urlParams.get('mode') === 'production') {
+            if (urlParams.get('mode') === 'production') {
                 console.log('정식 버전 모드로 설정됨');
                 isDemoMode = false;
                 // URL에서 mode 파라미터 제거
@@ -7660,6 +7673,12 @@
         // 앱 데이터 로드 - 통합 버전
         async function loadAppData() {
             try {
+                // 사용자 인증 상태 확인
+                if (!currentUser) {
+                    console.log('사용자 정보가 없어 데이터 로드를 건너뜁니다.');
+                    return;
+                }
+                
                 // 데이터 로딩 상태 표시
                 UIManager.showLoading('데이터를 로드하는 중...');
                 
@@ -7669,7 +7688,7 @@
                     currentUser.email === 'demo@teamtodo.test'
                 ));
                 
-                console.log('데이터 로드 시작 (데모 모드:', isInDemoMode, ')');
+                console.log('데이터 로드 시작 (데모 모드:', isInDemoMode, ')', '사용자:', currentUser?.email);
                 
                 if (isInDemoMode) {
                     // 데모 모드: localStorage 기반
@@ -8369,6 +8388,11 @@
         // 워크스페이스 로드
         async function loadWorkspaces() {
             try {
+                if (!currentUser) {
+                    console.warn('현재 사용자가 없어서 워크스페이스를 로드할 수 없습니다.');
+                    return;
+                }
+                
                 const { data, error } = await APIManager.select('workspaces', {
                     select: `
                         *,
@@ -8423,7 +8447,10 @@
         
         // 할 일 로드
         async function loadTodos() {
-            if (!currentWorkspace) return;
+            if (!currentUser || !currentWorkspace) {
+                console.warn('사용자 또는 워크스페이스 정보가 없어서 할 일을 로드할 수 없습니다.');
+                return;
+            }
             
             try {
                 const { data, error } = await APIManager.select('todos', {
@@ -8450,6 +8477,10 @@
         // 알림 로드
         async function loadNotifications() {
             try {
+                if (!currentUser) {
+                    console.warn('현재 사용자가 없어서 알림을 로드할 수 없습니다.');
+                    return;
+                }
                 const { data, error } = await APIManager.select('notifications', {
                     filters: { user_id: currentUser.id },
                     orderBy: { column: 'created_at', ascending: false },
