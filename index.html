@@ -7102,10 +7102,153 @@
             element.innerHTML = html;
         }
         
+        // OAuth 콜백 처리 및 사용자 세션 관리
+        async function handleAuthCallback() {
+            try {
+                // URL에서 OAuth 콜백 매개변수 확인
+                const urlParams = new URLSearchParams(window.location.search);
+                const accessToken = urlParams.get('access_token');
+                const refreshToken = urlParams.get('refresh_token');
+                
+                if (accessToken) {
+                    console.log('OAuth 콜백 감지됨, 사용자 세션 처리 중...');
+                    
+                    // URL 정리 (토큰 제거)
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
+                    // 현재 사용자 정보 가져오기
+                    const { data: authUser, error: authError } = await APIManager.auth.getUser();
+                    
+                    if (authError || !authUser) {
+                        console.error('사용자 정보 가져오기 실패:', authError);
+                        return;
+                    }
+                    
+                    // 데이터베이스에 사용자 정보 저장/업데이트
+                    await ensureUserInDatabase(authUser.user);
+                    
+                    // 대시보드로 이동
+                    UIManager.showScreen('app');
+                    return true;
+                }
+                
+                // 기존 세션 확인
+                const { data: authUser, error } = await APIManager.auth.getUser();
+                if (authUser && !error) {
+                    console.log('기존 로그인 세션 발견됨');
+                    await ensureUserInDatabase(authUser.user);
+                    UIManager.showScreen('app');
+                    return true;
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('인증 콜백 처리 중 오류:', error);
+                return false;
+            }
+        }
+
+        // 사용자 정보를 데이터베이스에 저장/업데이트
+        async function ensureUserInDatabase(authUser) {
+            try {
+                // 기존 사용자 확인
+                const { data: existingUser, error: fetchError } = await APIManager.select('users', {
+                    filters: { id: { eq: authUser.id } }
+                });
+                
+                if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: no rows returned
+                    console.error('사용자 조회 오류:', fetchError);
+                    return;
+                }
+                
+                if (existingUser && existingUser.length > 0) {
+                    // 기존 사용자 업데이트
+                    const { error: updateError } = await APIManager.update('users', 
+                        {
+                            email: authUser.email,
+                            full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name,
+                            avatar_url: authUser.user_metadata?.avatar_url,
+                            updated_at: new Date().toISOString()
+                        },
+                        { id: { eq: authUser.id } }
+                    );
+                    
+                    if (updateError) {
+                        console.error('사용자 정보 업데이트 오류:', updateError);
+                    } else {
+                        console.log('사용자 정보 업데이트 완료');
+                    }
+                } else {
+                    // 새 사용자 생성
+                    const { error: insertError } = await APIManager.insert('users', {
+                        id: authUser.id,
+                        email: authUser.email,
+                        full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name,
+                        avatar_url: authUser.user_metadata?.avatar_url,
+                        account_status: 'approved', // 구글 로그인 사용자는 자동 승인
+                        global_role: 'user'
+                    });
+                    
+                    if (insertError) {
+                        console.error('새 사용자 생성 오류:', insertError);
+                    } else {
+                        console.log('새 사용자 생성 완료');
+                        
+                        // 기본 워크스페이스 생성
+                        await createDefaultWorkspace(authUser.id);
+                    }
+                }
+            } catch (error) {
+                console.error('사용자 데이터베이스 처리 오류:', error);
+            }
+        }
+
+        // 기본 워크스페이스 생성
+        async function createDefaultWorkspace(userId) {
+            try {
+                const { data: workspace, error: workspaceError } = await APIManager.insert('workspaces', {
+                    name: '내 워크스페이스',
+                    description: '기본 개인 워크스페이스',
+                    created_by: userId
+                });
+                
+                if (workspaceError) {
+                    console.error('기본 워크스페이스 생성 오류:', workspaceError);
+                    return;
+                }
+                
+                const workspaceId = workspace[0]?.id;
+                if (workspaceId) {
+                    // 워크스페이스 멤버로 추가
+                    const { error: memberError } = await APIManager.insert('workspace_members', {
+                        workspace_id: workspaceId,
+                        user_id: userId,
+                        role: 'admin'
+                    });
+                    
+                    if (memberError) {
+                        console.error('워크스페이스 멤버 추가 오류:', memberError);
+                    } else {
+                        console.log('기본 워크스페이스 설정 완료');
+                    }
+                }
+            } catch (error) {
+                console.error('기본 워크스페이스 생성 중 오류:', error);
+            }
+        }
+
         // 초기화
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             debugLog('DOMContentLoaded 이벤트 발생');
             initializeSafetyVariables();
+            
+            // OAuth 콜백 처리 (페이지 로드 시)
+            const authHandled = await handleAuthCallback();
+            
+            // 인증이 처리되지 않았다면 랜딩페이지 유지
+            if (!authHandled) {
+                console.log('인증되지 않은 사용자 - 랜딩페이지 표시');
+            }
             
             // 편집 모달 날짜 선택기 초기화
             flatpickr("#editTodoDueDate", {
@@ -12416,8 +12559,13 @@
                 btn.disabled = true;
                 btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0;"></div> 로그인 중...';
                 
+                // 현재 URL을 리다이렉트 URL로 사용
+                const redirectTo = window.location.origin + window.location.pathname;
+                
                 const { data, error } = await APIManager.auth.signInWithOAuth('google', {
-                    redirectTo: window.location.origin
+                    options: {
+                        redirectTo: redirectTo
+                    }
                 });
                 
                 if (error) {
