@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeamTodo - 협업용 할 일 관리</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="console.log('Supabase 라이브러리 로드 완료')" onerror="console.error('Supabase 라이브러리 로드 실패')"></script>
     <!-- Flatpickr 달력 라이브러리 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -6534,23 +6534,46 @@
             // Supabase 클라이언트 초기화
             initializeClient: function() {
                 try {
-                    if (!window.supabase) {
+                    console.log('=== Supabase 초기화 시작 ===');
+                    console.log('1. 라이브러리 확인 - typeof supabase:', typeof supabase);
+                    console.log('2. 전역 supabase 객체:', window.supabase ? ' 존재' : '없음');
+                    
+                    // Supabase 라이브러리 로드 확인
+                    if (typeof supabase === 'undefined') {
                         throw new Error('Supabase 라이브러리가 로드되지 않았습니다.');
                     }
+                    
+                    console.log('3. createClient 함수 확인:', typeof supabase.createClient);
+                    if (typeof supabase.createClient !== 'function') {
+                        throw new Error('supabase.createClient가 함수가 아닙니다.');
+                    }
+                    
+                    console.log('4. 설정 확인 - URL:', SUPABASE_URL ? '존재' : '없음');
+                    console.log('5. 설정 확인 - KEY:', SUPABASE_ANON_KEY ? '존재' : '없음');
                     
                     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
                         throw new Error('Supabase 설정이 없습니다.');
                     }
                     
-                    this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    console.log('6. 클라이언트 생성 중...');
+                    
+                    this.client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                         autoRefreshToken: true,
                         persistSession: true,
                         detectSessionInUrl: true
                     });
                     
-                    console.log('API 클라이언트 초기화 성공');
+                    if (!this.client) {
+                        throw new Error('Supabase 클라이언트 생성 실패');
+                    }
+                    
+                    console.log('7. 클라이언트 생성 성공:', this.client);
+                    console.log('=== API 클라이언트 초기화 완료 ===');
                     return true;
                 } catch (error) {
+                    console.error('=== Supabase 초기화 실패 ===');
+                    console.error('오류 상세:', error);
+                    console.error('스택 트레이스:', error.stack);
                     ErrorManager.handle(error, '데이터베이스 연결 초기화 실패', 'APIManager.initializeClient');
                     return false;
                 }
@@ -6880,19 +6903,21 @@
         let supabase = null;
         
         // 페이지 로드 시 Supabase 초기화
-        if (typeof window.supabase !== 'undefined') {
+        if (typeof supabase !== 'undefined') {
+            console.log('Supabase 라이브러리 로드됨, 초기화 시작');
             SupabaseManager.initialize();
-            supabase = SupabaseManager.client;
+            window.supabase = SupabaseManager.client; // 전역 변수 설정
         } else {
             console.log('Supabase 라이브러리 로딩 대기 중...');
             // 라이브러리 로드를 기다림
             let checkCount = 0;
             const checkInterval = setInterval(() => {
                 checkCount++;
-                if (typeof window.supabase !== 'undefined') {
+                if (typeof supabase !== 'undefined') {
                     clearInterval(checkInterval);
+                    console.log('Supabase 라이브러리 로드 완료, 초기화 시작');
                     SupabaseManager.initialize();
-                    supabase = SupabaseManager.client;
+                    window.supabase = SupabaseManager.client; // 전역 변수 설정
                 } else if (checkCount > 50) { // 5초 대기
                     clearInterval(checkInterval);
                     console.error('Supabase 라이브러리 로딩 시간 초과');
@@ -7231,6 +7256,41 @@
             }
         }
 
+        // Supabase 라이브러리 로드 대기
+        async function waitForSupabaseLibrary() {
+            return new Promise((resolve) => {
+                // 즉시 확인
+                if (typeof supabase !== 'undefined' && typeof supabase.createClient === 'function') {
+                    console.log('Supabase 라이브러리 이미 로드됨');
+                    resolve();
+                    return;
+                }
+                
+                console.log('Supabase 라이브러리 로딩 대기 중...');
+                let checkCount = 0;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    console.log(`Supabase 로드 확인 ${checkCount}/50: typeof supabase =`, typeof supabase);
+                    
+                    if (typeof supabase !== 'undefined' && typeof supabase.createClient === 'function') {
+                        clearInterval(checkInterval);
+                        console.log('Supabase 라이브러리 로드 완료');
+                        resolve();
+                    } else if (checkCount > 50) { // 5초 대기
+                        clearInterval(checkInterval);
+                        console.error('Supabase 라이브러리 로딩 시간 초과');
+                        console.error('현재 supabase 상태:', {
+                            exists: typeof supabase !== 'undefined',
+                            hasCreateClient: typeof supabase !== 'undefined' && typeof supabase.createClient === 'function',
+                            type: typeof supabase
+                        });
+                        isDemoMode = true;
+                        resolve(); // 타임아웃되어도 진행
+                    }
+                }, 100);
+            });
+        }
+
         // 기본 워크스페이스 생성
         async function createDefaultWorkspace(userId) {
             try {
@@ -7270,11 +7330,22 @@
             debugLog('DOMContentLoaded 이벤트 발생');
             initializeSafetyVariables();
             
-            // Supabase 초기화
-            console.log('Supabase 초기화 중...');
+            // Supabase 라이브러리 로드 대기 및 초기화
+            console.log('=== 애플리케이션 초기화 시작 ===');
+            console.log('1. Supabase 라이브러리 로드 확인...');
+            await waitForSupabaseLibrary();
+            
+            if (isDemoMode) {
+                console.log('데모 모드로 실행 - Supabase 라이브러리 로드 실패');
+                showNotification('네트워크 문제로 인해 데모 모드로 실행됩니다. 새로고침 후 다시 시도해주세요.', 'warning');
+                return;
+            }
+            
+            console.log('2. Supabase 클라이언트 초기화...');
             const supabaseInitialized = SupabaseManager.initialize();
             
             if (supabaseInitialized) {
+                console.log('3. 인증 상태 확인...');
                 // OAuth 콜백 처리 (페이지 로드 시)
                 const authHandled = await handleAuthCallback();
                 
@@ -7282,8 +7353,10 @@
                 if (!authHandled) {
                     console.log('인증되지 않은 사용자 - 랜딩페이지 표시');
                 }
+                console.log('=== 애플리케이션 초기화 완료 ===');
             } else {
                 console.log('Supabase 초기화 실패 - 데모 모드로 실행');
+                showNotification('백엔드 연결에 실패했습니다. 새로고침 후 다시 시도해주세요.', 'error');
             }
             
             // 편집 모달 날짜 선택기 초기화
